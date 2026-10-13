@@ -48,6 +48,29 @@ def cmd_diff(args):
     return 1
 
 
+def cmd_check(args):
+    from pathlib import Path
+
+    from .checker import run_check
+
+    if args.symptom == "-":
+        symptom = sys.stdin.read()
+    else:
+        symptom = args.symptom
+
+    catalog_path = Path(args.catalog) if args.catalog else None
+
+    return run_check(
+        symptom=symptom,
+        catalog_path=catalog_path,
+        top_n=args.top,
+        threshold=args.threshold,
+        output_format=args.format,
+        fail_on=args.fail_on,
+        quiet=args.quiet,
+    )
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="ghostline",
@@ -82,6 +105,42 @@ def build_parser():
     p.add_argument("--from", dest="from_ref", required=True)
     p.add_argument("--to", dest="to_ref", required=True)
     p.set_defaults(func=cmd_diff)
+
+    p = sub.add_parser(
+        "check", help="Check a symptom against the DEM-X catalog (offline)."
+    )
+    p.add_argument(
+        "symptom",
+        help="Symptom description to check, or '-' to read from stdin.",
+    )
+    p.add_argument(
+        "--top", type=int, default=3, help="Number of top results (default: 3)."
+    )
+    p.add_argument(
+        "--threshold",
+        type=float,
+        default=0.5,
+        help="Match score threshold (default: 0.5).",
+    )
+    p.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text).",
+    )
+    p.add_argument(
+        "--fail-on",
+        nargs="*",
+        metavar="CODE",
+        help="Exit 2 only if these disorder codes match.",
+    )
+    p.add_argument(
+        "--catalog", help="Path to custom catalog.json (default: vendored)."
+    )
+    p.add_argument(
+        "--quiet", "-q", action="store_true", help="Suppress detailed output."
+    )
+    p.set_defaults(func=cmd_check)
 
     return parser
 

@@ -1,0 +1,16 @@
+DEM-X Catalog License
+=====================
+
+License: TBD (owner decision pending, likely CC BY 4.0)
+
+The DEM-X disorder taxonomy catalog included in this package is derived from
+the KIRU DEM-X project (https://kiru.solutions/dem-x/).
+
+The final license terms for this catalog data are pending owner decision.
+The expected license is Creative Commons Attribution 4.0 International
+(CC BY 4.0), but this has not yet been confirmed.
+
+Source: WoodaBaker/kiru
+Path: frontend/dem_x_app/taxonomy/disorders
+
+For licensing questions, contact the KIRU project maintainers.
