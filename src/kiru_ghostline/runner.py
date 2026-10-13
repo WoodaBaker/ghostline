@@ -1,7 +1,7 @@
 """Runner: execute a selected set of batteries against a target.
 
 Batteries are independent, so selection is explicit: run one, a few, or
-all. The budget is shared across the run — expensive suites fail loudly
+all. The budget is shared across the run -- expensive suites fail loudly
 instead of silently spending.
 """
 

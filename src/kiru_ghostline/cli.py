@@ -1,6 +1,6 @@
 """Ghostline CLI: probe, watch, report, diff.
 
-Batteries run where the agent lives — your laptop, your VPC, your CI —
+Batteries run where the agent lives -- your laptop, your VPC, your CI --
 so API keys and inference spend stay with you.
 """
 
@@ -52,7 +52,9 @@ def build_parser():
         prog="ghostline",
         description="Behavioral diagnostics for AI agents.",
     )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("probe", help="Run disorder probe batteries.")

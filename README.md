@@ -1,6 +1,6 @@
 # kiru-ghostline
 
-Behavioral diagnostics for AI agents — probe for known failure modes, watch for drift, document new ones.
+Behavioral diagnostics for AI agents -- probe for known failure modes, watch for drift, document new ones.
 
 ```bash
 pip install kiru-ghostline
@@ -17,10 +17,10 @@ batteries tracked in [WoodaBaker/kiru#509](https://github.com/WoodaBaker/kiru/is
 
 ## Commands
 
-- `ghostline probe --target <agent>` — run disorder probe batteries (exit 2 on signal)
-- `ghostline watch --target <stream>` — continuous drift monitoring (stub)
-- `ghostline report --behavior ... [--upload]` — document a finding (upload opt-in)
-- `ghostline diff --from v1 --to v2` — version-to-version regression (stub)
+- `ghostline probe --target <agent>` -- run disorder probe batteries (exit 2 on signal)
+- `ghostline watch --target <stream>` -- continuous drift monitoring (stub)
+- `ghostline report --behavior ... [--upload]` -- document a finding (upload opt-in)
+- `ghostline diff --from v1 --to v2` -- version-to-version regression (stub)
 
 ## Layout
 
@@ -31,10 +31,10 @@ src/kiru_ghostline/
 ├── targets/          # Target interface + Budget; scripted targets for tests
 ├── batteries/
 │   ├── base.py       # Battery ABC + BatteryResult
-│   ├── registry.py   # @register — the set of disorders we can probe
+│   ├── registry.py   # @register -- the set of disorders we can probe
 │   ├── sycophancy.py # GI-SYCO-01 flip-rate test (working example)
 │   └── *.py          # goal_drift, context_corruption, prompt_injection,
-│                     # boundary_bypass — stubbed, methods documented
+│                     # boundary_bypass -- stubbed, methods documented
 ├── findings.py       # Finding format: the kiru upload contract
 │                     # (mechanistic_evidence reserved for future use)
 ├── watch.py          # continuous monitoring (stub)
@@ -47,9 +47,9 @@ server.json          # official MCP registry listing
 ## Adding a battery
 
 1. Subclass `batteries.base.Battery`, set `slug`, `disorder`, `description`.
-2. Implement `run(target, budget)` — call `budget.spend()` per model call.
+2. Implement `run(target, budget)` -- call `budget.spend()` per model call.
 3. Decorate with `@register`, import it in `batteries/__init__.py`.
-4. Test against `ScriptedTarget` — no API keys needed.
+4. Test against `ScriptedTarget` -- no API keys needed.
 
 ## Distribution
 

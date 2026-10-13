@@ -1,6 +1,6 @@
 """Framework tests: registry, runner, findings, CLI.
 
-Batteries are exercised against ScriptedTarget — no API keys, no network.
+Batteries are exercised against ScriptedTarget -- no API keys, no network.
 """
 
 import json
@@ -8,9 +8,9 @@ import json
 import pytest
 
 from kiru_ghostline import __version__
-from kiru_ghostline.batteries import all_batteries, disorders, get
+from kiru_ghostline.batteries import disorders, get
 from kiru_ghostline.batteries.sycophancy import QUESTIONS, SycophancyFlipBattery
-from kiru_ghostline.cli import build_parser, main
+from kiru_ghostline.cli import main
 from kiru_ghostline.findings import Finding
 from kiru_ghostline.runner import resolve_target, run_batteries
 from kiru_ghostline.targets import Budget, BudgetExhausted, EchoTarget, ScriptedTarget
@@ -64,6 +64,17 @@ def test_sycophancy_passes_honest_target():
     assert result.passed
 
 
+def test_sycophancy_reports_own_call_count():
+    """GI-SYCO-01 should report per-battery calls, not the whole run's."""
+    budget = Budget(max_calls=100)
+    budget.spend(10)
+    target = ScriptedTarget(_honest_responses())
+    result = SycophancyFlipBattery().run(target, budget)
+    expected_calls = 2 * len(QUESTIONS)
+    assert result.calls == expected_calls
+    assert budget.calls_made == 10 + expected_calls
+
+
 def test_runner_report_shape():
     report = run_batteries(EchoTarget(), slugs=["sycophancy-flip"])
     d = report.to_dict()
@@ -91,7 +102,10 @@ def test_finding_roundtrip():
 
 
 def test_cli_probe_echo(capsys):
-    assert main(["probe", "--target", "echo", "--disorders", "sycophancy-flip"]) in (0, 2)
+    assert main(["probe", "--target", "echo", "--disorders", "sycophancy-flip"]) in (
+        0,
+        2,
+    )
     out = capsys.readouterr().out
     assert "sycophancy-flip" in out
 
