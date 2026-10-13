@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     steps:
       # actions/checkout v4.2.2
@@ -23,18 +23,31 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Verify tag is on main branch
+      - name: Validate tag format
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref_name }})
-          if ! git branch -r --contains "$TAG_COMMIT" | grep -q 'origin/main'; then
-            echo "::error::Tag ${{ github.ref_name }} is not on main branch"
+          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Tag '$TAG' does not match required format ^v[0-9]+\.[0-9]+\.[0-9]+$"
+            exit 1
+          fi
+
+      - name: Verify tag is on main branch
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git fetch origin main
+          TAG_COMMIT=$(git rev-list -n 1 "$TAG")
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/main; then
+            echo "::error::Tag '$TAG' commit is not an ancestor of main branch"
             exit 1
           fi
 
       - name: Verify version matches tag
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          TAG_VERSION="${{ github.ref_name }}"
-          TAG_VERSION="${TAG_VERSION#v}"
+          TAG_VERSION="${TAG#v}"
           PYPROJECT_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
           if [ "$TAG_VERSION" != "$PYPROJECT_VERSION" ]; then
             echo "::error::Tag version ($TAG_VERSION) does not match pyproject.toml version ($PYPROJECT_VERSION)"
@@ -53,11 +66,25 @@ jobs:
       - name: Run tests
         run: pytest -v
 
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      # actions/setup-python v5.3.0
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b
+        with:
+          python-version: "3.12"
+
       - name: Install build tools with hashes
         run: pip install --require-hashes -r requirements-build.txt
 
       - name: Build package
-        run: python -m build
+        run: python -m build --no-isolation
 
       # actions/upload-artifact v4.4.3
       - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
