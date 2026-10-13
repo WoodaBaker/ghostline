@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -195,10 +194,11 @@ def generate_catalog(
 
 
 def parse_date(date_str: str) -> str:
-    """Parse and validate a date string (YYYY-MM-DD)."""
-    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-        raise ValueError(f"Invalid date format: {date_str}. Expected YYYY-MM-DD")
-    datetime.strptime(date_str, "%Y-%m-%d")
+    """Parse and validate a date string (YYYY-MM-DD) using datetime.strptime."""
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError as e:
+        raise ValueError(f"Invalid date format: {date_str}. Expected YYYY-MM-DD") from e
     return date_str
 
 

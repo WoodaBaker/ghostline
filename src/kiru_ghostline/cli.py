@@ -11,6 +11,14 @@ import sys
 from . import __version__
 
 
+class GhostlineArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser that exits with code 1 on usage errors."""
+
+    def error(self, message: str) -> None:
+        self.print_usage(sys.stderr)
+        self.exit(1, f"{self.prog}: error: {message}\n")
+
+
 def cmd_probe(args):
     from .runner import resolve_target, run_batteries
 
@@ -71,40 +79,62 @@ def cmd_check(args):
         threshold=args.threshold,
         output_format=args.format,
         fail_on=fail_on,
-        quiet=args.quiet,
+        quiet=getattr(args, "quiet", False),
+    )
+
+
+def _add_common_args(
+    parser: argparse.ArgumentParser, suppress_default: bool = False
+) -> None:
+    """Add common arguments to a parser.
+
+    Args:
+        parser: The parser to add arguments to.
+        suppress_default: If True, use SUPPRESS for defaults to avoid
+            overwriting values set by the main parser.
+    """
+    default = argparse.SUPPRESS if suppress_default else None
+    parser.add_argument(
+        "--catalog",
+        metavar="PATH",
+        default=default,
+        help="Path to custom catalog.json (default: vendored).",
+    )
+    parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        default=False if not suppress_default else argparse.SUPPRESS,
+        help="Suppress detailed output.",
     )
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(
+    parser = GhostlineArgumentParser(
         prog="ghostline",
         description="Behavioral diagnostics for AI agents.",
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
-    parser.add_argument(
-        "--catalog",
-        metavar="PATH",
-        help="Path to custom catalog.json (default: vendored). Used by 'check'.",
-    )
-    parser.add_argument(
-        "--quiet", "-q", action="store_true", help="Suppress detailed output."
-    )
+    _add_common_args(parser)
 
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("probe", help="Run disorder probe batteries.")
+    _add_common_args(p, suppress_default=True)
     p.add_argument("--target", required=True, help="Target spec ('echo' for demo).")
     p.add_argument("--disorders", nargs="*", help="Battery slugs (default: all).")
     p.add_argument("--max-calls", type=int, default=200, help="Model-call budget.")
     p.set_defaults(func=cmd_probe)
 
     p = sub.add_parser("watch", help="Monitor a live agent for drift.")
+    _add_common_args(p, suppress_default=True)
     p.add_argument("--target", required=True, help="Agent event stream to watch.")
     p.set_defaults(func=cmd_watch)
 
     p = sub.add_parser("report", help="Document a finding for kiru upload.")
+    _add_common_args(p, suppress_default=True)
     p.add_argument("--behavior", required=True, help="What was observed.")
     p.add_argument("--model", default="", help="Model under test.")
     p.add_argument("--scaffolding", default="", help="Scaffolding/framework.")
@@ -115,6 +145,7 @@ def build_parser():
     p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("diff", help="Diff battery results across versions.")
+    _add_common_args(p, suppress_default=True)
     p.add_argument("--from", dest="from_ref", required=True)
     p.add_argument("--to", dest="to_ref", required=True)
     p.set_defaults(func=cmd_diff)
@@ -122,6 +153,7 @@ def build_parser():
     p = sub.add_parser(
         "check", help="Check a symptom against the DEM-X catalog (offline)."
     )
+    _add_common_args(p, suppress_default=True)
     p.add_argument(
         "symptom",
         help="Symptom description to check, or '-' to read from stdin.",
@@ -152,7 +184,12 @@ def build_parser():
 
 
 def main(argv=None):
-    args = build_parser().parse_args(argv)
+    try:
+        args = build_parser().parse_args(argv)
+    except SystemExit as e:
+        if e.code == 2:
+            return 1
+        return e.code if e.code else 0
     return args.func(args)
 
 

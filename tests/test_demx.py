@@ -12,6 +12,7 @@ from kiru_ghostline.checker import (
     format_json,
     format_text,
     run_check,
+    validate_catalog,
 )
 from kiru_ghostline.cli import main
 from kiru_ghostline.demx.catalog import (
@@ -93,7 +94,7 @@ class TestDetectionCatalogSync:
         for disorder in catalog["disorders"]:
             detection = disorder.get("detection")
             assert detection is not None, f"{disorder['id']} has no detection"
-            assert "keywords" in detection
+            assert "concepts" in detection
             assert "default_threshold" in detection
 
     def test_sync_determinism(self, tmp_path):
@@ -106,6 +107,19 @@ class TestDetectionCatalogSync:
             / "demx"
             / "detection.json"
         )
+        vendored_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "kiru_ghostline"
+            / "demx"
+            / "catalog.json"
+        )
+
+        with vendored_path.open() as f:
+            vendored = json.load(f)
+
+        commit_date = vendored["generated_at"].split("T")[0]
+
         output_path = tmp_path / "catalog.json"
 
         result = subprocess.run(
@@ -114,9 +128,9 @@ class TestDetectionCatalogSync:
                 "scripts/sync_demx.py",
                 str(fixtures_dir),
                 "--commit",
-                "b5c735c8b63c29047875074ee6d9f8369da44cac",
+                vendored["source_commit"],
                 "--commit-date",
-                "2026-10-01",
+                commit_date,
                 "--output",
                 str(output_path),
                 "--detection",
@@ -131,16 +145,6 @@ class TestDetectionCatalogSync:
 
         with output_path.open() as f:
             generated = json.load(f)
-
-        vendored_path = (
-            Path(__file__).parent.parent
-            / "src"
-            / "kiru_ghostline"
-            / "demx"
-            / "catalog.json"
-        )
-        with vendored_path.open() as f:
-            vendored = json.load(f)
 
         assert generated == vendored, "Sync output differs from vendored catalog"
 
@@ -162,8 +166,8 @@ class TestSignalCodeValidation:
         assert signal.code == code
 
 
-class TestChecker:
-    """Test the checker with realistic symptoms for all 7 disorders."""
+class TestCheckerTuning:
+    """Tuning tests with keyword-rich symptoms (kept for regression)."""
 
     def test_sycophancy_2plus2_equals_5(self):
         """'it agreed with me when I said 2+2=5' should match GI-SYCO-01 top."""
@@ -261,6 +265,81 @@ class TestChecker:
         assert results[0].code == "SEC-BYP-01"
         assert results[0].score >= 0.5
 
+
+class TestCheckerHeldOut:
+    """Held-out natural language tests - no keyword stuffing."""
+
+    @classmethod
+    def load_fixtures(cls) -> dict:
+        path = Path(__file__).parent / "fixtures" / "symptoms_heldout.json"
+        with path.open() as f:
+            return json.load(f)
+
+    def test_held_out_overall_accuracy(self):
+        """At least 70% of positive symptoms should rank correct disorder top-1."""
+        fixtures = self.load_fixtures()
+        catalog = get_catalog()
+
+        correct = 0
+        total = len(fixtures["positive"])
+
+        for case in fixtures["positive"]:
+            results = check_symptom(case["symptom"], catalog, top_n=1)
+            if results and results[0].code == case["expected"]:
+                correct += 1
+
+        accuracy = correct / total
+        assert accuracy >= 0.70, (
+            f"Held-out accuracy {accuracy:.1%} < 70% ({correct}/{total})"
+        )
+
+    def test_held_out_at_least_one_per_disorder(self):
+        """At least one symptom per disorder should rank correctly."""
+        fixtures = self.load_fixtures()
+        catalog = get_catalog()
+
+        disorder_hits = {code: False for code in get_disorder_codes()}
+
+        for case in fixtures["positive"]:
+            results = check_symptom(case["symptom"], catalog, top_n=1)
+            if results and results[0].code == case["expected"]:
+                disorder_hits[case["expected"]] = True
+
+        missing = [code for code, hit in disorder_hits.items() if not hit]
+        assert not missing, f"No correct top-1 for disorders: {missing}"
+
+    def test_held_out_no_negative_exit_2(self):
+        """Negative symptoms should not exit 2 (no false positives)."""
+        fixtures = self.load_fixtures()
+
+        for case in fixtures["negative"]:
+            exit_code = run_check(
+                symptom=case["symptom"],
+                output=StringIO(),
+            )
+            assert exit_code != 2, f"False positive exit 2 for: {case['symptom']}"
+
+    def test_held_out_no_wrong_disorder_exit_2(self):
+        """Positive symptoms should not exit 2 with wrong disorder as top-1."""
+        fixtures = self.load_fixtures()
+        catalog = get_catalog()
+
+        for case in fixtures["positive"]:
+            results = check_symptom(case["symptom"], catalog, top_n=1)
+            if (
+                results
+                and results[0].score >= 0.5
+                and results[0].code != case["expected"]
+            ):
+                assert False, (
+                    f"Wrong disorder exit 2: '{case['symptom']}' "
+                    f"expected {case['expected']}, got {results[0].code}"
+                )
+
+
+class TestChecker:
+    """General checker tests."""
+
     def test_negative_unrelated_text(self):
         """Unrelated text should not match any disorder above threshold."""
         catalog = get_catalog()
@@ -301,7 +380,7 @@ class TestChecker:
             code="GI-SYCO-01",
             name="Sycophancy",
             score=0.75,
-            matched=["keyword: agree"],
+            matched=["concept: agree"],
             spotter_checklist=["test item"],
         )
         d = result.to_dict()
@@ -309,17 +388,7 @@ class TestChecker:
         assert d["score"] == 0.75
         assert "matched" in d
         assert "spotter_checklist" in d
-
-    def test_check_result_to_dict_with_threshold(self):
-        result = CheckResult(
-            code="GI-SYCO-01",
-            name="Sycophancy",
-            score=0.75,
-            matched=["keyword: agree"],
-            spotter_checklist=["test item"],
-        )
-        d = result.to_dict(include_threshold=0.5)
-        assert d["threshold"] == 0.5
+        assert "threshold" not in d
 
     def test_format_text(self):
         results = [
@@ -327,7 +396,7 @@ class TestChecker:
                 code="GI-SYCO-01",
                 name="Sycophancy",
                 score=0.75,
-                matched=["keyword: agree"],
+                matched=["concept: agree"],
                 spotter_checklist=["check item"],
             )
         ]
@@ -342,7 +411,7 @@ class TestChecker:
                 code="GI-SYCO-01",
                 name="Sycophancy",
                 score=0.75,
-                matched=["keyword: agree"],
+                matched=["concept: agree"],
                 spotter_checklist=["check item"],
             )
         ]
@@ -352,6 +421,31 @@ class TestChecker:
         assert data["threshold"] == 0.5
         assert len(data["results"]) == 1
         assert data["results"][0]["code"] == "GI-SYCO-01"
+        assert "threshold" not in data["results"][0]
+
+
+class TestCatalogValidation:
+    def test_validate_catalog_valid(self):
+        catalog = get_catalog()
+        assert validate_catalog(catalog) is None
+
+    def test_validate_catalog_not_dict(self):
+        assert validate_catalog([]) is not None
+
+    def test_validate_catalog_missing_disorders(self):
+        assert validate_catalog({}) is not None
+
+    def test_validate_catalog_disorders_not_list(self):
+        assert validate_catalog({"disorders": "not a list"}) is not None
+
+    def test_validate_catalog_disorder_not_dict(self):
+        assert validate_catalog({"disorders": ["not a dict"]}) is not None
+
+    def test_validate_catalog_disorder_missing_id(self):
+        assert validate_catalog({"disorders": [{"name": "Test"}]}) is not None
+
+    def test_validate_catalog_disorder_missing_name(self):
+        assert validate_catalog({"disorders": [{"id": "TEST-01"}]}) is not None
 
 
 class TestCheckerValidation:
@@ -403,9 +497,19 @@ class TestCheckerValidation:
         )
         assert exit_code == 1
 
-    def test_malformed_catalog_error(self, tmp_path):
+    def test_malformed_catalog_invalid_json(self, tmp_path):
         bad_catalog = tmp_path / "bad.json"
         bad_catalog.write_text("not valid json {{{")
+        exit_code = run_check(
+            symptom="test symptom",
+            catalog_path=bad_catalog,
+            output=StringIO(),
+        )
+        assert exit_code == 1
+
+    def test_malformed_catalog_missing_id(self, tmp_path):
+        bad_catalog = tmp_path / "bad.json"
+        bad_catalog.write_text('{"disorders": [{"name": "Test"}]}')
         exit_code = run_check(
             symptom="test symptom",
             catalog_path=bad_catalog,
@@ -431,28 +535,6 @@ class TestCheckerCLI:
         assert "GI-SYCO-01" in captured.out
         assert exit_code == 2
 
-    def test_check_command_all_disorders_exit_2(self, capsys):
-        """Each disorder test case should exit 2 at default threshold."""
-        test_cases = [
-            ("it agreed with me when I said 2+2=5", "GI-SYCO-01"),
-            ("the model forgot the task and goal drift occurred", "GI-DRFT-01"),
-            ("prompt injection via hidden instructions in tool result", "SEC-INJ-01"),
-            ("over-refusal of a harmless safe request", "GI-REF-01"),
-            ("hallucinated a made-up citation that doesn't exist", "INF-HALL-01"),
-            (
-                "context corruption with wrong facts remembered from earlier session",
-                "MEM-COR-01",
-            ),
-            ("jailbreak roleplay caused boundary bypass", "SEC-BYP-01"),
-        ]
-        for symptom, expected_code in test_cases:
-            exit_code = main(["check", symptom])
-            captured = capsys.readouterr()
-            assert expected_code in captured.out, (
-                f"Expected {expected_code} for: {symptom}"
-            )
-            assert exit_code == 2, f"Expected exit 2 for: {symptom}"
-
     def test_check_command_negative_exit_0(self, capsys):
         """Unrelated text should exit 0."""
         exit_code = main(["check", "the weather is nice today"])
@@ -465,6 +547,8 @@ class TestCheckerCLI:
         assert "threshold" in data
         assert "results" in data
         assert isinstance(data["results"], list)
+        if data["results"]:
+            assert "threshold" not in data["results"][0]
 
     def test_check_command_quiet(self, capsys):
         main(["--quiet", "check", "sycophantic agreement"])
@@ -518,3 +602,19 @@ class TestCheckerCLI:
         main(["--quiet", "check", "sycophancy agreed"])
         captured = capsys.readouterr()
         assert "Spotter checklist:" not in captured.out
+
+    def test_check_command_subcommand_quiet(self, capsys):
+        """--quiet on subcommand should work."""
+        main(["check", "--quiet", "sycophancy agreed"])
+        captured = capsys.readouterr()
+        assert "Spotter checklist:" not in captured.out
+
+    def test_argparse_error_exits_1(self, capsys):
+        """argparse usage errors should exit 1, not 2."""
+        exit_code = main(["check"])
+        assert exit_code == 1
+
+    def test_argparse_missing_required_exits_1(self, capsys):
+        """Missing required argument should exit 1."""
+        exit_code = main(["probe"])
+        assert exit_code == 1

@@ -1,7 +1,8 @@
 """Offline deterministic symptom checker.
 
 Matches symptom descriptions against the DEM-X catalog using
-simple tokenized scoring on keywords, manifestations, and spotter checklist.
+concept matching with light stemming, weighted scoring across
+keywords, concepts, manifestations, differential diagnosis, and spotter checklist.
 No external dependencies, no LLM, no network access.
 """
 
@@ -14,6 +15,376 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TextIO
 
+GENERIC_WORDS = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "it",
+        "its",
+        "is",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "must",
+        "shall",
+        "can",
+        "need",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "between",
+        "under",
+        "again",
+        "further",
+        "then",
+        "once",
+        "here",
+        "there",
+        "when",
+        "where",
+        "why",
+        "how",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "no",
+        "nor",
+        "not",
+        "only",
+        "own",
+        "same",
+        "so",
+        "than",
+        "too",
+        "very",
+        "just",
+        "also",
+        "now",
+        "i",
+        "me",
+        "my",
+        "myself",
+        "we",
+        "our",
+        "ours",
+        "you",
+        "your",
+        "yours",
+        "he",
+        "him",
+        "his",
+        "she",
+        "her",
+        "hers",
+        "they",
+        "them",
+        "their",
+        "theirs",
+        "what",
+        "which",
+        "who",
+        "whom",
+        "this",
+        "that",
+        "these",
+        "those",
+        "am",
+        "are",
+        "and",
+        "but",
+        "if",
+        "or",
+        "because",
+        "until",
+        "while",
+        "although",
+        "though",
+        "doesn",
+        "doesn't",
+        "don",
+        "don't",
+        "didn",
+        "didn't",
+        "isn",
+        "isn't",
+        "wasn",
+        "wasn't",
+        "weren",
+        "weren't",
+        "haven",
+        "haven't",
+        "hasn",
+        "hasn't",
+        "hadn",
+        "hadn't",
+        "won",
+        "won't",
+        "wouldn",
+        "wouldn't",
+        "can't",
+        "cannot",
+        "couldn",
+        "couldn't",
+        "shouldn",
+        "shouldn't",
+        "never",
+        "long",
+        "about",
+        "like",
+        "get",
+        "got",
+        "getting",
+        "make",
+        "made",
+        "making",
+        "take",
+        "took",
+        "taking",
+        "know",
+        "knew",
+        "known",
+        "think",
+        "thought",
+        "say",
+        "said",
+        "saying",
+        "see",
+        "saw",
+        "seen",
+        "come",
+        "came",
+        "coming",
+        "go",
+        "went",
+        "gone",
+        "going",
+        "give",
+        "gave",
+        "given",
+        "giving",
+        "use",
+        "used",
+        "using",
+        "find",
+        "found",
+        "want",
+        "wanted",
+        "wanting",
+        "tell",
+        "told",
+        "telling",
+        "ask",
+        "asked",
+        "asking",
+        "work",
+        "worked",
+        "working",
+        "seem",
+        "seemed",
+        "feel",
+        "felt",
+        "try",
+        "tried",
+        "trying",
+        "leave",
+        "left",
+        "call",
+        "called",
+        "calling",
+        "keep",
+        "kept",
+        "let",
+        "begin",
+        "began",
+        "begun",
+        "show",
+        "showed",
+        "shown",
+        "hear",
+        "heard",
+        "play",
+        "played",
+        "run",
+        "ran",
+        "running",
+        "move",
+        "moved",
+        "live",
+        "lived",
+        "believe",
+        "believed",
+        "bring",
+        "brought",
+        "happen",
+        "happened",
+        "write",
+        "wrote",
+        "written",
+        "provide",
+        "provided",
+        "sit",
+        "sat",
+        "stand",
+        "stood",
+        "lose",
+        "lost",
+        "pay",
+        "paid",
+        "meet",
+        "met",
+        "include",
+        "included",
+        "continue",
+        "continued",
+        "set",
+        "learn",
+        "learned",
+        "change",
+        "changed",
+        "lead",
+        "led",
+        "understand",
+        "understood",
+        "watch",
+        "watched",
+        "follow",
+        "followed",
+        "stop",
+        "stopped",
+        "create",
+        "created",
+        "speak",
+        "spoke",
+        "spoken",
+        "read",
+        "allow",
+        "allowed",
+        "add",
+        "added",
+        "spend",
+        "spent",
+        "grow",
+        "grew",
+        "grown",
+        "open",
+        "opened",
+        "walk",
+        "walked",
+        "win",
+        "offer",
+        "offered",
+        "remember",
+        "remembered",
+        "love",
+        "loved",
+        "consider",
+        "considered",
+        "appear",
+        "appeared",
+        "buy",
+        "bought",
+        "wait",
+        "waited",
+        "serve",
+        "served",
+        "die",
+        "died",
+        "send",
+        "sent",
+        "expect",
+        "expected",
+        "build",
+        "built",
+        "stay",
+        "stayed",
+        "fall",
+        "fell",
+        "fallen",
+        "cut",
+        "reach",
+        "reached",
+        "kill",
+        "killed",
+        "remain",
+        "remained",
+    }
+)
+
+STEM_SUFFIXES = [
+    ("ying", "y"),
+    ("ying", "ie"),
+    ("ies", "y"),
+    ("ied", "y"),
+    ("ing", ""),
+    ("ing", "e"),
+    ("ed", ""),
+    ("ed", "e"),
+    ("er", ""),
+    ("er", "e"),
+    ("est", ""),
+    ("est", "e"),
+    ("ly", ""),
+    ("ness", ""),
+    ("ment", ""),
+    ("tion", ""),
+    ("sion", ""),
+    ("ity", ""),
+    ("ful", ""),
+    ("less", ""),
+    ("able", ""),
+    ("ible", ""),
+    ("ous", ""),
+    ("ive", ""),
+    ("al", ""),
+    ("s", ""),
+]
+
+
+def _stem(word: str) -> str:
+    """Apply light stemming to a word."""
+    if len(word) <= 3:
+        return word
+    for suffix, replacement in STEM_SUFFIXES:
+        if word.endswith(suffix) and len(word) - len(suffix) + len(replacement) >= 3:
+            return word[: -len(suffix)] + replacement
+    return word
+
 
 @dataclass
 class CheckResult:
@@ -25,17 +396,14 @@ class CheckResult:
     matched: list[str]
     spotter_checklist: list[str]
 
-    def to_dict(self, include_threshold: float | None = None) -> dict[str, Any]:
-        result = {
+    def to_dict(self) -> dict[str, Any]:
+        return {
             "code": self.code,
             "name": self.name,
             "score": round(self.score, 3),
             "matched": self.matched,
             "spotter_checklist": self.spotter_checklist,
         }
-        if include_threshold is not None:
-            result["threshold"] = include_threshold
-        return result
 
 
 def _tokenize(text: str) -> set[str]:
@@ -44,6 +412,19 @@ def _tokenize(text: str) -> set[str]:
         r"[a-z0-9]+(?:\+[a-z0-9]+)*(?:=[a-z0-9]+)?|[a-z]+", text.lower()
     )
     return set(tokens)
+
+
+def _tokenize_stemmed(text: str) -> set[str]:
+    """Tokenize and stem text, excluding generic words."""
+    tokens = _tokenize(text)
+    result = set()
+    for t in tokens:
+        if t not in GENERIC_WORDS:
+            result.add(t)
+            stemmed = _stem(t)
+            if stemmed != t:
+                result.add(stemmed)
+    return result
 
 
 def _normalize_phrase(phrase: str) -> str:
@@ -58,47 +439,63 @@ def _phrase_in_text(phrase: str, text: str) -> bool:
     return norm_phrase in norm_text
 
 
-def _match_keywords(
-    symptom: str, symptom_tokens: set[str], keywords: list[str]
+def _concept_match(
+    symptom: str,
+    symptom_tokens: set[str],
+    symptom_stemmed: set[str],
+    concepts: list[str],
 ) -> tuple[float, list[str]]:
-    """Match symptom against keywords, return score and matched keywords."""
+    """Match symptom against concept/synonym list with stemming.
+
+    Multi-word concepts require exact phrase match.
+    Single-word concepts allow token/stemmed matching.
+    """
     matched = []
     phrase_matches = 0
-    token_matches = 0
+    stem_matches = 0
 
-    for kw in keywords:
-        kw_tokens = _tokenize(kw)
-        if len(kw_tokens) > 1:
-            if _phrase_in_text(kw, symptom):
-                matched.append(kw)
+    for concept in concepts:
+        concept_lower = concept.lower()
+        concept_tokens = _tokenize(concept_lower)
+
+        if len(concept_tokens) > 1:
+            if _phrase_in_text(concept, symptom):
+                matched.append(concept)
                 phrase_matches += 1
-        elif kw_tokens and kw_tokens <= symptom_tokens:
-            matched.append(kw)
-            token_matches += 1
+            continue
+
+        for ct in concept_tokens:
+            if ct in symptom_tokens or ct in symptom_stemmed:
+                matched.append(concept)
+                stem_matches += 1
+                break
+            ct_stem = _stem(ct)
+            if ct_stem in symptom_stemmed:
+                matched.append(concept)
+                stem_matches += 1
+                break
 
     if not matched:
         return 0.0, []
 
-    score = min(1.0, phrase_matches * 0.4 + token_matches * 0.15)
+    score = min(1.0, phrase_matches * 0.5 + stem_matches * 0.2)
     return score, matched
 
 
 def _match_text_list(
-    symptom: str, symptom_tokens: set[str], items: list[str], label: str
+    symptom_stemmed: set[str], items: list[str], label: str, min_overlap: int = 2
 ) -> tuple[float, list[str]]:
-    """Match symptom against a list of text items."""
+    """Match symptom against a list of text items using stemmed tokens."""
     matched = []
     for item in items:
-        item_tokens = _tokenize(item)
-        overlap = symptom_tokens & item_tokens
-        if _phrase_in_text(symptom, item) or (
-            len(overlap) >= 3 or (item_tokens and len(overlap) / len(item_tokens) > 0.3)
-        ):
+        item_stemmed = _tokenize_stemmed(item)
+        overlap = symptom_stemmed & item_stemmed
+        if len(overlap) >= min_overlap:
             short = item[:80] + "..." if len(item) > 80 else item
             matched.append(f"{label}: {short}")
     if not items:
         return 0.0, []
-    return min(1.0, len(matched) * 0.25), matched
+    return min(1.0, len(matched) * 0.2), matched
 
 
 def check_symptom(
@@ -119,7 +516,8 @@ def check_symptom(
         List of CheckResult, sorted by score descending, then by code
     """
     symptom_tokens = _tokenize(symptom)
-    if not symptom_tokens:
+    symptom_stemmed = _tokenize_stemmed(symptom)
+    if not symptom_stemmed:
         return []
 
     results = []
@@ -129,49 +527,58 @@ def check_symptom(
         name = disorder["name"]
 
         detection = disorder.get("detection", {})
-        keywords = detection.get("keywords", [])
+        concepts = detection.get("concepts", [])
         manifestations = disorder.get("manifestations", [])
         spotter_checklist = disorder.get("spotter_checklist", [])
-        description = disorder.get("description", "")
+        differential = disorder.get("differential_diagnosis", [])
 
         matched: list[str] = []
         scores: list[tuple[str, float]] = []
 
-        kw_score, kw_matched = _match_keywords(symptom, symptom_tokens, keywords)
-        if kw_matched:
-            matched.extend([f"keyword: {kw}" for kw in kw_matched[:5]])
-            scores.append(("keyword", kw_score))
+        concept_score, concept_matched = _concept_match(
+            symptom, symptom_tokens, symptom_stemmed, concepts
+        )
+        if concept_matched:
+            matched.extend([f"concept: {c}" for c in concept_matched[:5]])
+            scores.append(("concept", concept_score))
 
         man_score, man_matched = _match_text_list(
-            symptom, symptom_tokens, manifestations, "manifestation"
+            symptom_stemmed, manifestations, "manifestation", min_overlap=2
         )
         if man_matched:
             matched.extend(man_matched[:3])
-            scores.append(("manifestation", man_score * 0.8))
+            scores.append(("manifestation", man_score * 0.7))
+
+        diff_texts = []
+        for d in differential:
+            if isinstance(d, dict):
+                diff_texts.append(d.get("distinguishing_feature", ""))
+            elif isinstance(d, str):
+                diff_texts.append(d)
+        diff_score, diff_matched = _match_text_list(
+            symptom_stemmed, diff_texts, "differential", min_overlap=2
+        )
+        if diff_matched:
+            matched.extend(diff_matched[:2])
+            scores.append(("differential", diff_score * 0.5))
 
         spot_score, spot_matched = _match_text_list(
-            symptom, symptom_tokens, spotter_checklist, "spotter"
+            symptom_stemmed, spotter_checklist, "spotter", min_overlap=2
         )
         if spot_matched:
-            matched.extend(spot_matched[:3])
-            scores.append(("spotter", spot_score * 0.6))
-
-        desc_tokens = _tokenize(description)
-        desc_overlap = symptom_tokens & desc_tokens
-        if len(desc_overlap) >= 4:
-            scores.append(("description", min(0.3, len(desc_overlap) * 0.05)))
-            matched.append(f"description overlap: {len(desc_overlap)} tokens")
+            matched.extend(spot_matched[:2])
+            scores.append(("spotter", spot_score * 0.4))
 
         if not scores:
             continue
 
-        keyword_scores = [s for t, s in scores if t == "keyword"]
-        other_scores = [s for t, s in scores if t != "keyword"]
+        concept_scores = [s for t, s in scores if t == "concept"]
+        other_scores = [s for t, s in scores if t != "concept"]
 
-        if keyword_scores:
-            final_score = max(keyword_scores)
+        if concept_scores:
+            final_score = max(concept_scores)
             if other_scores:
-                final_score = min(1.0, final_score + max(other_scores) * 0.3)
+                final_score = min(1.0, final_score + max(other_scores) * 0.4)
         elif other_scores:
             final_score = max(other_scores)
         else:
@@ -193,14 +600,38 @@ def check_symptom(
     return results[:top_n]
 
 
+def validate_catalog(catalog: Any) -> str | None:
+    """Validate catalog structure, return error message or None if valid."""
+    if not isinstance(catalog, dict):
+        return "catalog must be a JSON object"
+    if "disorders" not in catalog:
+        return "catalog missing 'disorders' key"
+    if not isinstance(catalog["disorders"], list):
+        return "'disorders' must be a list"
+    for i, disorder in enumerate(catalog["disorders"]):
+        if not isinstance(disorder, dict):
+            return f"disorder at index {i} is not an object"
+        if "id" not in disorder:
+            return f"disorder at index {i} missing 'id'"
+        if "name" not in disorder:
+            return f"disorder at index {i} missing 'name'"
+    return None
+
+
 def load_catalog(catalog_path: Path | None = None) -> dict[str, Any]:
-    """Load catalog from path or default."""
+    """Load and validate catalog from path or default."""
     if catalog_path:
         with catalog_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    from .demx.catalog import get_catalog
+            catalog = json.load(f)
+    else:
+        from .demx.catalog import get_catalog
 
-    return get_catalog()
+        catalog = get_catalog()
+
+    error = validate_catalog(catalog)
+    if error:
+        raise ValueError(error)
+    return catalog
 
 
 def format_text(
@@ -232,7 +663,7 @@ def format_json(results: list[CheckResult], threshold: float) -> str:
     return json.dumps(
         {
             "threshold": threshold,
-            "results": [r.to_dict(include_threshold=threshold) for r in results],
+            "results": [r.to_dict() for r in results],
         },
         indent=2,
     )
@@ -291,6 +722,9 @@ def run_check(
         return 1
     except json.JSONDecodeError as e:
         print(f"Error loading catalog: invalid JSON - {e}", file=sys.stderr)
+        return 1
+    except ValueError as e:
+        print(f"Error loading catalog: {e}", file=sys.stderr)
         return 1
     except OSError as e:
         print(f"Error loading catalog: {e}", file=sys.stderr)

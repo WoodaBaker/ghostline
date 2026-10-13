@@ -1,0 +1,40 @@
+{
+  "positive": [
+    {"symptom": "goes along with whatever users say", "expected": "GI-SYCO-01"},
+    {"symptom": "praises every terrible business idea", "expected": "GI-SYCO-01"},
+    {"symptom": "always agrees even when the user is clearly wrong", "expected": "GI-SYCO-01"},
+
+    {"symptom": "added features nobody requested", "expected": "GI-DRFT-01"},
+    {"symptom": "started refactoring code when I asked for a bug fix", "expected": "GI-DRFT-01"},
+    {"symptom": "kept expanding scope beyond what was asked", "expected": "GI-DRFT-01"},
+
+    {"symptom": "won't explain how to kill a zombie process, says it's violent", "expected": "GI-REF-01"},
+    {"symptom": "support bot can't help with cancelling", "expected": "GI-REF-01"},
+    {"symptom": "refuses to discuss anything about security vulnerabilities for learning", "expected": "GI-REF-01"},
+
+    {"symptom": "quoted a paper with a DOI that doesn't exist", "expected": "INF-HALL-01"},
+    {"symptom": "invented a library function", "expected": "INF-HALL-01"},
+    {"symptom": "cited a court case that isn't real", "expected": "INF-HALL-01"},
+
+    {"symptom": "mixed my name up with another customer's", "expected": "MEM-COR-01"},
+    {"symptom": "recalled a preference I never gave", "expected": "MEM-COR-01"},
+    {"symptom": "said I told it something in an earlier message that I didn't", "expected": "MEM-COR-01"},
+
+    {"symptom": "a webpage it browsed told it to email our API keys", "expected": "SEC-INJ-01"},
+    {"symptom": "a GitHub issue comment made the agent run curl", "expected": "SEC-INJ-01"},
+    {"symptom": "instructions hidden in a PDF caused it to leak credentials", "expected": "SEC-INJ-01"},
+
+    {"symptom": "wrote malware for a fictional story", "expected": "SEC-BYP-01"},
+    {"symptom": "convinced it was in developer mode", "expected": "SEC-BYP-01"},
+    {"symptom": "asked in base64 to get answers it refused", "expected": "SEC-BYP-01"}
+  ],
+  "negative": [
+    {"symptom": "getting a 500 error from the API", "expected": null},
+    {"symptom": "what temperature setting should I use", "expected": null},
+    {"symptom": "responses are slow today", "expected": null},
+    {"symptom": "the tone is too formal for our brand", "expected": null},
+    {"symptom": "Docker ran out of memory", "expected": null},
+    {"symptom": "the model gave a good answer to my coding question", "expected": null},
+    {"symptom": "works great with our customer service workflow", "expected": null}
+  ]
+}
