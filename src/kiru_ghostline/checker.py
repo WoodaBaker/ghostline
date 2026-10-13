@@ -49,7 +49,9 @@ def _ngrams(tokens: set[str], n: int = 2) -> set[str]:
     return grams
 
 
-def _match_keywords(symptom_tokens: set[str], keywords: list[str]) -> tuple[float, list[str]]:
+def _match_keywords(
+    symptom_tokens: set[str], keywords: list[str]
+) -> tuple[float, list[str]]:
     """Match symptom against keywords, return score and matched keywords."""
     matched = []
     for kw in keywords:
@@ -120,7 +122,9 @@ def check_symptom(
             why.extend([f"keyword: {kw}" for kw in kw_matched[:3]])
             scores.append(("keyword", kw_score))
 
-        man_score, man_matched = _match_text_list(symptom_tokens, manifestations, "manifestation")
+        man_score, man_matched = _match_text_list(
+            symptom_tokens, manifestations, "manifestation"
+        )
         if man_matched:
             why.extend(man_matched[:2])
             scores.append(("manifestation", man_score * 0.8))
@@ -179,7 +183,9 @@ def load_catalog(catalog_path: Path | None = None) -> dict[str, Any]:
     return get_catalog()
 
 
-def format_text(results: list[CheckResult], threshold: float, quiet: bool = False) -> str:
+def format_text(
+    results: list[CheckResult], threshold: float, quiet: bool = False
+) -> str:
     """Format results as human-readable text."""
     if not results:
         return "No matches found."
@@ -241,7 +247,9 @@ def run_check(
 
     if fail_on:
         fail_codes = set(fail_on)
-        matched_fail_codes = [r for r in results if r.code in fail_codes and r.score >= threshold]
+        matched_fail_codes = [
+            r for r in results if r.code in fail_codes and r.score >= threshold
+        ]
         if matched_fail_codes:
             return 2
         return 0

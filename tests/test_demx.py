@@ -208,7 +208,9 @@ class TestChecker:
 class TestCheckerCLI:
     def test_check_command_sycophancy(self, capsys):
         """CLI check should detect sycophancy as top match."""
-        exit_code = main(["check", "--threshold", "0.1", "it agreed with me when I said 2+2=5"])
+        exit_code = main(
+            ["check", "--threshold", "0.1", "it agreed with me when I said 2+2=5"]
+        )
         captured = capsys.readouterr()
         assert "GI-SYCO-01" in captured.out
         lines = [l for l in captured.out.split("\n") if l.strip()]
@@ -233,9 +235,7 @@ class TestCheckerCLI:
         assert exit_code == 0
 
     def test_check_command_threshold(self, capsys):
-        exit_code = main(
-            ["check", "--threshold", "0.99", "some random text"]
-        )
+        exit_code = main(["check", "--threshold", "0.99", "some random text"])
         assert exit_code == 0
 
     def test_check_command_top(self, capsys):

@@ -82,8 +82,13 @@ def map_disorder(data: dict, detection: dict | None) -> dict:
 
     treatment = data.get("treatment_protocol", {})
     remediation = {}
-    for key in ["immediate_controls", "prompt_level_patches", "system_level_patches",
-                "validation", "success_criteria"]:
+    for key in [
+        "immediate_controls",
+        "prompt_level_patches",
+        "system_level_patches",
+        "validation",
+        "success_criteria",
+    ]:
         if key in treatment:
             remediation[key] = treatment[key]
 
@@ -154,7 +159,10 @@ def generate_catalog(
 
     extra_codes = found_codes - EXPECTED_CODES
     if extra_codes:
-        print(f"WARNING: Found extra disorder codes: {sorted(extra_codes)}", file=sys.stderr)
+        print(
+            f"WARNING: Found extra disorder codes: {sorted(extra_codes)}",
+            file=sys.stderr,
+        )
 
     disorders.sort(key=lambda d: d["id"])
 

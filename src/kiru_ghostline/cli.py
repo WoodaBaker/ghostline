@@ -134,9 +134,7 @@ def build_parser():
         metavar="CODE",
         help="Exit 2 only if these disorder codes match.",
     )
-    p.add_argument(
-        "--catalog", help="Path to custom catalog.json (default: vendored)."
-    )
+    p.add_argument("--catalog", help="Path to custom catalog.json (default: vendored).")
     p.add_argument(
         "--quiet", "-q", action="store_true", help="Suppress detailed output."
     )
