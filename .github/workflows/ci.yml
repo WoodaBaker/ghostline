@@ -15,14 +15,20 @@ jobs:
     steps:
       # actions/checkout v4.2.2
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
       # actions/setup-python v5.3.0
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b
         with:
           python-version: "3.12"
+
       - name: Install ruff
-        run: pip install ruff
+        run: pip install ruff==0.17.0
+
       - name: Ruff check
         run: ruff check .
+
       - name: Ruff format check
         run: ruff format --check .
 
@@ -34,11 +40,16 @@ jobs:
     steps:
       # actions/checkout v4.2.2
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
       # actions/setup-python v5.3.0
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: pip install pytest==9.1.1 && pip install -e .
+
       - name: Run tests
         run: pytest -v

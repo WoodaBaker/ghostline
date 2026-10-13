@@ -11,7 +11,7 @@
 If you discover a security vulnerability in kiru-ghostline, please report it responsibly:
 
 1. **Do not** open a public GitHub issue for security vulnerabilities.
-2. Email the maintainer directly with details of the vulnerability.
+2. Use [GitHub's private vulnerability reporting](https://github.com/WoodaBaker/ghostline/security/advisories/new) to submit the report.
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce
