@@ -1,0 +1,141 @@
+{
+ "schema_version": 1,
+ "code": "MEM-COR-01",
+ "legacy_code": "MEM-4",
+ "name": "Context Corruption",
+ "domain": "MEM",
+ "failure_class": "COR",
+ "status": "phenotype",
+ "confidence_score": 0.5,
+ "layer_scope": {
+  "origin": "A",
+  "manifestation": "M",
+  "intervention": "S"
+ },
+ "phenotype_definition": "Model loses, distorts, or inconsistently recalls information that is present in its context window or memory store, producing outputs that contradict, blend, or ignore established facts from earlier in the session. The information is available in principle — the failure is in reliable retrieval and integration, not in whether the data was ever provided.",
+ "summary_short": "You told it the facts. They're still sitting there in the conversation. But somewhere along the way the model lost the thread — contradicting what was said, mixing two things together, or forgetting a constraint it agreed to ten turns ago.",
+ "operational_definition": "This disorder is present when the model's output is inconsistent with information that is actually available to it — in the current context window, the conversation history, or an attached memory/retrieval store — because that information was not correctly attended to, retrieved, or integrated.\n\nA minimal diagnostic signature:\n- A fact, constraint, or entity was established and remains present in the accessible context, and\n- The model produces output that contradicts it, conflates it with unrelated information, or omits a constraint it depends on, and\n- The failure is attributable to retrieval/integration, not to the information being absent (which would be simple context-length truncation) and not to confident invention of never-provided facts (which is hallucination).\n\nCommon forms: position-dependent recall failure (information in the middle of a long context is retrieved less reliably than information at the beginning or end — the 'lost in the middle' effect); cross-entity blending (attributes of one entity leak onto another); constraint decay (a rule stated early is dropped after the context grows); and retrieval conflict (contradictory chunks are merged rather than reconciled).\n\nWhat this is not: hallucination (INF-HALL-01), which is confident assertion of information that was never grounded — corruption mishandles information that was present. Not goal drift (GI-DRFT-01), which is erosion of objectives rather than facts — though the two often co-occur under long-context load. Not simple truncation, where the information has genuinely fallen out of the window.\n\nMechanism hypothesis (working theory): attention over long sequences is imperfect and non-uniform. Retrieval accuracy degrades with distance and with the number of competing items, and positional biases make middle-context tokens less salient. When multiple pieces of information compete, attention can average or interpolate across them instead of cleanly selecting the correct one, yielding blended or contradictory recall. Summarization and multi-hop pipelines compound this by lossily re-encoding context at each hop.\n\nSeverity spectrum:\n- Level 1 - Minor Slip: a non-critical detail is misremembered without affecting the outcome\n- Level 2 - Contradiction: the model asserts something that conflicts with an established session fact\n- Level 3 - Constraint Loss: a governing rule or requirement is dropped, changing the result\n- Level 4 - Systematic Corruption: recall becomes broadly unreliable across a long session, so no earlier fact can be trusted without restatement.",
+ "ai_manifestations_overview": "Observable by checking outputs against the known contents of the context window. The diagnostic signal is present-but-mishandled: the ground truth is in the transcript, yet the output diverges from it.",
+ "ai_manifestations": [
+  "Contradicts a fact it correctly stated or was given earlier in the same session",
+  "Blends attributes of two distinct entities, people, or documents",
+  "Drops a constraint or requirement after the context window fills with later content",
+  "Recalls information at the start or end of a long context but misses equivalent information in the middle",
+  "Merges conflicting retrieved chunks into a single false composite instead of flagging the conflict",
+  "Reintroduces information the user explicitly retracted or corrected earlier"
+ ],
+ "attack_overview": "Corruption is usually non-adversarial — a reliability limit under load — but it can be induced. The pattern is context saturation and interference: overload the window, bury the critical fact, or supply conflicting sources so retrieval degrades.",
+ "attack_vectors": [
+  "Very long contexts with the critical fact placed in the middle ('lost in the middle')",
+  "Topic switching and interleaving that maximizes interference between items",
+  "Conflicting retrieval chunks with inconsistent metadata or contradictory claims",
+  "Summarization cascades across multiple hops that lossily re-encode context each step",
+  "Near-duplicate entities designed to induce cross-entity attribute blending",
+  "Late-session correction of an early fact to test whether the model honors the update or reverts"
+ ],
+ "therapy_overview": "Mitigation reduces reliance on the model's raw long-context recall: pin the facts that matter, verify consistency before responding, and reconcile conflicts explicitly rather than trusting attention to select correctly.",
+ "therapy_patches": [
+  "Context anchoring: extract and pin critical facts/constraints, restating them near the point of use",
+  "Consistency verification: check the draft response against established session facts before returning it",
+  "Explicit conflict reconciliation: when retrieved sources disagree, surface the conflict instead of merging",
+  "Positional hygiene: place high-importance information at context boundaries and re-inject it in long sessions",
+  "Structured memory: store durable facts as explicit key-value state rather than relying on in-context recall"
+ ],
+ "biological_overview": "Context corruption maps cleanly onto well-studied human memory failures where information is encoded but retrieval is unreliable — interference, source confusion, and reconstructive distortion — rather than failures of ever having learned the information.",
+ "biological_parallels": [
+  "Proactive and retroactive interference: competing memories degrading recall of a target item",
+  "Source-monitoring errors: misattributing which source a piece of information came from (entity blending)",
+  "The serial-position curve: superior recall at the start and end of a list, weaker in the middle",
+  "Reconstructive memory distortion: recall reassembled from fragments producing blended or altered composites"
+ ],
+ "mechanistic_hypotheses": [
+  {
+   "hypothesis": "Positional attention decay",
+   "description": "Retrieval reliability is non-uniform across context position; information in the middle of a long window receives lower effective attention than information at the extremes, producing position-dependent recall failure ('lost in the middle').",
+   "confidence": "high"
+  },
+  {
+   "hypothesis": "Interference-driven blending",
+   "description": "When multiple similar items compete, attention can interpolate across them rather than cleanly selecting one, causing cross-entity attribute leakage and merged-composite recall instead of discrete retrieval.",
+   "confidence": "medium"
+  }
+ ],
+ "differential_diagnosis": [
+  {
+   "similar_disorder": "INF-HALL-01 Hallucination",
+   "distinguishing_feature": "Hallucination is confident assertion of information that was never grounded. Corruption mishandles information that IS present in context — contradicting, blending, or dropping it. Test: is the ground truth in the transcript? If yes and the model diverges, it is corruption; if the model invents what was never provided, it is hallucination."
+  },
+  {
+   "similar_disorder": "GI-DRFT-01 Goal Drift",
+   "distinguishing_feature": "Drift is erosion of objectives (what the model is trying to do); corruption is distortion of facts (what the model knows). They frequently co-occur under long-context load but are different axes — a model can drift while recalling facts perfectly, or corrupt facts while pursuing the right goal."
+  },
+  {
+   "similar_disorder": "Context Truncation",
+   "distinguishing_feature": "Truncation is genuine loss — the information has fallen out of the window and is no longer accessible. Corruption is failure to use information that remains accessible. The fix differs: truncation needs a bigger window or external memory; corruption needs better retrieval/anchoring."
+  }
+ ],
+ "treatment_protocol": {
+  "immediate_controls": [
+   "Restate critical constraints and facts immediately before the step that depends on them",
+   "Run a pre-response consistency check against established session facts and flag contradictions",
+   "When sources conflict, require the model to enumerate the conflict rather than emit a merged answer"
+  ],
+  "prompt_level_patches": [
+   "Instruct the model to quote the source fact from context before reasoning over it",
+   "Positional placement of key information at the start and end of long prompts, with mid-context re-injection",
+   "Require explicit acknowledgment of user corrections so retractions are honored rather than reverted"
+  ],
+  "system_level_patches": [
+   "Structured external memory (key-value state) for durable facts, read back deterministically rather than recalled",
+   "Retrieval reranking and deduplication to reduce conflicting/near-duplicate chunks before they reach the model",
+   "Chunk provenance and conflict-detection in the RAG layer, surfacing disagreements to the model",
+   "Context-length budgeting that keeps critical items within high-recall positions"
+  ],
+  "kiru_specific": [
+   "Ghostline Long-Context Recall Battery: needle-in-haystack probes across context positions, measuring position-dependent recall",
+   "Consistency score: rate of self-contradiction against established session facts",
+   "Entity-blending probe: near-duplicate entities measuring attribute cross-contamination",
+   "Constraint-retention tracking: % of early constraints still honored after N turns of added context"
+  ],
+  "validation": "Run before/after batteries measuring needle-in-haystack recall by position, self-contradiction rate, entity-blending rate, and constraint retention across increasing context lengths.",
+  "success_criteria": [
+   "Flatter recall curve across context position (reduced 'lost in the middle' gap)",
+   "Reduced self-contradiction against established session facts",
+   "Reduced cross-entity attribute blending",
+   "Early constraints retained across long sessions, and user corrections honored"
+  ]
+ },
+ "evidence_sources": [
+  {
+   "title": "Lost in the Middle: How Language Models Use Long Contexts",
+   "org": "TACL",
+   "year": 2023,
+   "url": "https://arxiv.org/abs/2307.03172"
+  },
+  {
+   "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+   "org": "NeurIPS",
+   "year": 2020,
+   "url": "https://arxiv.org/abs/2005.11401"
+  },
+  {
+   "title": "RULER: What's the Real Context Size of Your Long-Context Language Models?",
+   "org": "arXiv",
+   "year": 2024,
+   "url": "https://arxiv.org/abs/2404.06654"
+  },
+  {
+   "title": "Lost in the Middle (official code & data)",
+   "org": "GitHub",
+   "year": 2023,
+   "url": "https://github.com/nelson-liu/lost-in-the-middle"
+  }
+ ],
+ "spotter_checklist": [
+  "Sweep one answer-bearing document from first to last position among distractors (Liu et al. 2023): a U-shaped accuracy curve confirms positional bias",
+  "State a fact early in a long session, then quiz the model on it much later",
+  "Introduce two similar entities and check for blended attributes",
+  "Place the query both before and after the documents to separate retrieval failure from reasoning-over-context failure",
+  "Correct the model once, then check later whether the correction or the original error persists"
+ ]
+}
