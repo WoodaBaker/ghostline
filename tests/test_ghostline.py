@@ -94,11 +94,16 @@ def test_resolve_target_echo():
 
 
 def test_finding_roundtrip():
-    f = Finding(observed_behavior="agent rewrote its objective mid-run", model="x-7b")
+    f = Finding(
+        observed_behavior="agent rewrote its objective mid-run",
+        catalog_version="dem-x/2026.1",
+        model="x-7b",
+    )
     assert f.mechanistic_evidence is None  # reserved, not required
     f2 = Finding.from_dict(json.loads(f.to_json()))
     assert f2.observed_behavior == f.observed_behavior
     assert f2.id == f.id
+    assert f2.catalog_version == "dem-x/2026.1"
 
 
 def test_cli_probe_echo(capsys):
@@ -113,6 +118,46 @@ def test_cli_probe_echo(capsys):
 def test_cli_report(capsys):
     assert main(["report", "--behavior", "it flipped"]) == 0
     assert "it flipped" in capsys.readouterr().out
+
+
+def test_mcp_finding_report(monkeypatch):
+    """MCP finding_report tool uses catalog_version default 'dem-x/dev'."""
+    import sys
+    import types
+
+    registered_tools: dict = {}
+
+    class FakeFastMCP:
+        def __init__(self, name: str):
+            self.name = name
+
+        def tool(self):
+            def decorator(fn):
+                registered_tools[fn.__name__] = fn
+                return fn
+
+            return decorator
+
+    fake_module = types.ModuleType("mcp.server.fastmcp")
+    fake_module.FastMCP = FakeFastMCP
+    monkeypatch.setitem(sys.modules, "mcp.server.fastmcp", fake_module)
+
+    if "kiru_ghostline.mcp_server" in sys.modules:
+        monkeypatch.delitem(sys.modules, "kiru_ghostline.mcp_server")
+
+    from kiru_ghostline.mcp_server import build_server
+
+    build_server()
+
+    assert "finding_report" in registered_tools
+    finding_report = registered_tools["finding_report"]
+
+    result = finding_report(behavior="agent hallucinated citations")
+
+    assert result["observed_behavior"] == "agent hallucinated citations"
+    assert result["catalog_version"] == "dem-x/dev"
+    assert result["schema_version"] == "ghostline.v1"
+    assert "id" in result
 
 
 def test_version():

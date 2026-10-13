@@ -32,8 +32,9 @@ def cmd_report(args):
 
     finding = Finding(
         observed_behavior=args.behavior,
+        catalog_version=args.catalog_version,
         model=args.model or "",
-        scaffolding=args.scaffolding or "",
+        scaffolding=args.scaffolding or None,
     )
     if args.upload:
         print("upload: kiru API client not yet implemented (kiru#509).")
@@ -71,6 +72,9 @@ def build_parser():
     p.add_argument("--behavior", required=True, help="What was observed.")
     p.add_argument("--model", default="", help="Model under test.")
     p.add_argument("--scaffolding", default="", help="Scaffolding/framework.")
+    p.add_argument(
+        "--catalog-version", default="dem-x/dev", help="Disorder catalog version."
+    )
     p.add_argument("--upload", action="store_true", help="Upload to kiru (opt-in).")
     p.set_defaults(func=cmd_report)
 
