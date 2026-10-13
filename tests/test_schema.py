@@ -209,7 +209,7 @@ class TestEvent:
         assert "agent_label" not in d
         assert "seq" not in d
         assert "model" not in d
-        assert "capture_mode" not in d  # default partial_payload
+        assert "capture_mode" in d
         assert "metadata" not in d
 
     def test_event_from_dict(self):
@@ -847,11 +847,41 @@ class TestVersioning:
         trace = read_jsonl(path)
         assert trace.schema_version == "ghostline.v0"
 
+    def test_write_always_uses_current_schema_version(self, tmp_path):
+        """write_jsonl always writes SCHEMA_VERSION even when Trace read from v0."""
+        v0_path = tmp_path / "v0_input.jsonl"
+        content = (
+            '{"kind": "header", "schema_version": "ghostline.v0", '
+            '"trace_id": "t", "created_at": "2026-01-01T00:00:00Z", '
+            '"producer": "test", "capture_mode": "full_payload"}\n'
+            '{"kind": "event", "event_id": "e1", "event_type": "custom", '
+            '"ts": "2026-01-01T00:00:01Z", "session_key": "s", "payload": {}}\n'
+        )
+        v0_path.write_text(content, encoding="utf-8")
+        trace = read_jsonl(v0_path)
+        assert trace.schema_version == "ghostline.v0"
+
+        v1_path = tmp_path / "v1_output.jsonl"
+        write_jsonl(v1_path, trace)
+
+        with v1_path.open("r", encoding="utf-8") as f:
+            header_line = json.loads(f.readline())
+        assert header_line["schema_version"] == SCHEMA_VERSION
+        assert header_line["schema_version"] == "ghostline.v1"
+
     def test_unknown_major_version_rejected(self, tmp_path):
         path = tmp_path / "v99.jsonl"
         content = '{"kind": "header", "schema_version": "ghostline.v99"}\n'
         path.write_text(content, encoding="utf-8")
         with pytest.raises(TraceParseError, match="Unsupported schema major"):
+            read_jsonl(path)
+
+    def test_leading_zero_version_rejected(self, tmp_path):
+        """Leading zeros in version number rejected (ghostline.v01)."""
+        path = tmp_path / "v01.jsonl"
+        content = '{"kind": "header", "schema_version": "ghostline.v01"}\n'
+        path.write_text(content, encoding="utf-8")
+        with pytest.raises(TraceParseError, match="Invalid schema version format"):
             read_jsonl(path)
 
     def test_unknown_fields_roundtrip(self, tmp_path):

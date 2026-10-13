@@ -108,11 +108,11 @@ Unknown keys are preserved.
 |-------|------|----------|---------|-------|
 | id | str | yes | - | UUID4 |
 | schema_version | str | yes | 'ghostline.v1' | - |
-| suspected_disorder | str\|None | no | None | - |
+| suspected_disorder | str\|None | no | None | Optional; not required for CLI use |
 | observed_behavior | str | yes | - | - |
 | model | str | no | '' | - |
 | scaffolding | str\|None | no | None | - |
-| repeatability | float\|None | no | None | - |
+| repeatability | float\|None | no | None | Legacy strings like '4/5 runs' converted to fraction |
 | battery_scores | dict | no | {} | - |
 | telemetry_excerpts | list[Event] | no | [] | Redacted events |
 | diagnosis_id | str\|None | no | None | - |

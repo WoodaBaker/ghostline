@@ -13,6 +13,7 @@ behavioral evidence now, internals later.
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -21,6 +22,19 @@ if TYPE_CHECKING:
     from .schema import Event
 
 SCHEMA_VERSION = "ghostline.v1"
+
+_REPEATABILITY_PATTERN = re.compile(r"^(\d+)/(\d+)")
+
+
+def _parse_repeatability_string(s: str) -> float | None:
+    """Convert legacy repeatability strings like '4/5 runs' to fraction."""
+    match = _REPEATABILITY_PATTERN.match(s.strip())
+    if match:
+        numerator = int(match.group(1))
+        denominator = int(match.group(2))
+        if denominator > 0:
+            return numerator / denominator
+    return None
 
 
 @dataclass
@@ -85,7 +99,7 @@ class Finding:
 
         repeatability = data.get("repeatability")
         if isinstance(repeatability, str):
-            repeatability = None
+            repeatability = _parse_repeatability_string(repeatability)
 
         return cls(
             id=data.get("id", str(uuid.uuid4())),

@@ -120,5 +120,28 @@ def test_cli_report(capsys):
     assert "it flipped" in capsys.readouterr().out
 
 
+def test_mcp_finding_report():
+    """MCP finding_report tool builds Finding with catalog_version default."""
+    from kiru_ghostline.findings import Finding
+
+    result = Finding(
+        observed_behavior="agent confabulated facts",
+        model="test-model",
+        scaffolding="custom-scaffold",
+        catalog_version="dem-x/dev",
+    ).to_dict()
+    assert result["observed_behavior"] == "agent confabulated facts"
+    assert result["model"] == "test-model"
+    assert result["scaffolding"] == "custom-scaffold"
+    assert result["catalog_version"] == "dem-x/dev"
+
+    minimal = Finding(
+        observed_behavior="minimal finding",
+        catalog_version="dem-x/dev",
+    ).to_dict()
+    assert minimal["catalog_version"] == "dem-x/dev"
+    assert minimal.get("model", "") == ""
+
+
 def test_version():
     assert __version__ == "0.1.0"

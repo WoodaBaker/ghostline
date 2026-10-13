@@ -23,7 +23,7 @@ SCHEMA_VERSION = "ghostline.v1"
 CURRENT_MAJOR = 1
 SUPPORTED_MAJORS = {0, 1}
 
-_VERSION_PATTERN = re.compile(r"^ghostline\.v(\d+)$")
+_VERSION_PATTERN = re.compile(r"^ghostline\.v(0|[1-9]\d*)$")
 _RFC3339_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )
@@ -204,8 +204,7 @@ class Event:
             result["seq"] = self.seq
         if self.model is not None:
             result["model"] = self.model.to_dict()
-        if self.capture_mode != CaptureMode.PARTIAL_PAYLOAD:
-            result["capture_mode"] = self.capture_mode.value
+        result["capture_mode"] = self.capture_mode.value
         if self.metadata:
             result["metadata"] = self.metadata
         result.update(self._extra_fields)
@@ -751,7 +750,7 @@ def write_jsonl(
     else:
         with path.open("w", encoding="utf-8") as f:
             header = _TraceHeader(
-                schema_version=trace.schema_version,
+                schema_version=SCHEMA_VERSION,
                 trace_id=trace.trace_id,
                 created_at=trace.created_at,
                 producer=trace.producer,
@@ -784,7 +783,7 @@ def append_event(path: str | Path, event: Event, trace: Trace | None = None) -> 
             )
         with path.open("w", encoding="utf-8") as f:
             header = _TraceHeader(
-                schema_version=trace.schema_version,
+                schema_version=SCHEMA_VERSION,
                 trace_id=trace.trace_id,
                 created_at=trace.created_at,
                 producer=trace.producer,
@@ -813,7 +812,7 @@ def _read_jsonl_stream(f: TextIO, source_name: str = "<stream>") -> Trace:
     header: _TraceHeader | None = None
     events: list[Event] = []
     line_number = 0
-    last_line_truncated = False
+    truncated_line_number: int | None = None
 
     for raw_line in f:
         line_number += 1
@@ -825,11 +824,11 @@ def _read_jsonl_stream(f: TextIO, source_name: str = "<stream>") -> Trace:
         try:
             data = json.loads(line)
         except json.JSONDecodeError as e:
-            if line_number == 1:
+            if header is None:
                 raise TraceParseError(
-                    f"Invalid JSON in header: {e}", line_number=1
+                    f"Invalid JSON in header: {e}", line_number=line_number
                 ) from e
-            last_line_truncated = True
+            truncated_line_number = line_number
             continue
 
         if not isinstance(data, dict):
@@ -838,17 +837,17 @@ def _read_jsonl_stream(f: TextIO, source_name: str = "<stream>") -> Trace:
                 line_number=line_number,
             )
 
-        if last_line_truncated:
+        if truncated_line_number is not None:
             raise TraceParseError(
                 "Malformed line (previous truncated line was not last)",
-                line_number=line_number - 1,
+                line_number=truncated_line_number,
             )
 
         if header is None:
             try:
                 header = _TraceHeader.from_dict(data)
             except TraceValidationError as e:
-                raise TraceParseError(str(e), line_number=1) from e
+                raise TraceParseError(str(e), line_number=line_number) from e
         else:
             kind = data.get("kind")
             if kind != "event":
@@ -861,9 +860,10 @@ def _read_jsonl_stream(f: TextIO, source_name: str = "<stream>") -> Trace:
             except TraceValidationError as e:
                 raise TraceParseError(str(e), line_number=line_number) from e
 
-    if last_line_truncated:
+    if truncated_line_number is not None:
         warnings.warn(
-            f"Truncated last line in {source_name} (crash safety: ignored)",
+            f"Truncated last line (line {truncated_line_number}) in {source_name} "
+            "(crash safety: ignored)",
             stacklevel=3,
         )
 
@@ -897,7 +897,7 @@ def _iter_events_stream(f: TextIO, source_name: str = "<stream>") -> Iterator[Ev
     header_seen = False
     line_number = 0
     event_seq = 0
-    last_line_truncated = False
+    truncated_line_number: int | None = None
 
     for raw_line in f:
         line_number += 1
@@ -909,11 +909,11 @@ def _iter_events_stream(f: TextIO, source_name: str = "<stream>") -> Iterator[Ev
         try:
             data = json.loads(line)
         except json.JSONDecodeError as e:
-            if line_number == 1:
+            if not header_seen:
                 raise TraceParseError(
-                    f"Invalid JSON in header: {e}", line_number=1
+                    f"Invalid JSON in header: {e}", line_number=line_number
                 ) from e
-            last_line_truncated = True
+            truncated_line_number = line_number
             continue
 
         if not isinstance(data, dict):
@@ -922,17 +922,17 @@ def _iter_events_stream(f: TextIO, source_name: str = "<stream>") -> Iterator[Ev
                 line_number=line_number,
             )
 
-        if last_line_truncated:
+        if truncated_line_number is not None:
             raise TraceParseError(
                 "Malformed line (previous truncated line was not last)",
-                line_number=line_number - 1,
+                line_number=truncated_line_number,
             )
 
         if not header_seen:
             try:
                 _TraceHeader.from_dict(data)
             except TraceValidationError as e:
-                raise TraceParseError(str(e), line_number=1) from e
+                raise TraceParseError(str(e), line_number=line_number) from e
             header_seen = True
         else:
             kind = data.get("kind")
@@ -947,9 +947,10 @@ def _iter_events_stream(f: TextIO, source_name: str = "<stream>") -> Iterator[Ev
             except TraceValidationError as e:
                 raise TraceParseError(str(e), line_number=line_number) from e
 
-    if last_line_truncated:
+    if truncated_line_number is not None:
         warnings.warn(
-            f"Truncated last line in {source_name} (crash safety: ignored)",
+            f"Truncated last line (line {truncated_line_number}) in {source_name} "
+            "(crash safety: ignored)",
             stacklevel=3,
         )
 

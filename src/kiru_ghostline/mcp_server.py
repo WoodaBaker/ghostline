@@ -32,10 +32,18 @@ def build_server():
         return report.to_dict()
 
     @server.tool()
-    def finding_report(behavior: str, model: str = "", scaffolding: str = "") -> dict:
+    def finding_report(
+        behavior: str,
+        model: str = "",
+        scaffolding: str = "",
+        catalog_version: str = "dem-x/dev",
+    ) -> dict:
         """Document a behavioral finding in the kiru upload-ready format."""
         return Finding(
-            observed_behavior=behavior, model=model, scaffolding=scaffolding
+            observed_behavior=behavior,
+            model=model,
+            scaffolding=scaffolding or None,
+            catalog_version=catalog_version,
         ).to_dict()
 
     return server
