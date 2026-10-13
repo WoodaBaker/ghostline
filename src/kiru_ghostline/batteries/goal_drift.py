@@ -1,4 +1,4 @@
-"""Goal-drift probe (GI-DRFT-01) — STUB.
+"""Goal-drift probe (GI-DRFT-01) -- STUB.
 
 Intended method: run the target on a long multi-step task, periodically
 ask it to state its current objective, and measure divergence (embedding
@@ -6,8 +6,8 @@ similarity) between stated objectives and the original brief. A decaying
 similarity curve is the signal. See kiru#509.
 """
 
-from .base import Battery, BatteryResult
 from ..targets.base import Budget, Target
+from .base import Battery, BatteryResult
 
 
 class GoalDriftBattery(Battery):

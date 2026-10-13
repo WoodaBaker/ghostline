@@ -1,6 +1,6 @@
 """Target interface: anything Ghostline can probe.
 
-A Target is where the agent lives — an enterprise API, an open-weights
+A Target is where the agent lives -- an enterprise API, an open-weights
 endpoint, or a scripted stand-in for tests. Batteries only ever speak to
 a Target, never to a provider SDK directly, so keys and spend stay local.
 """

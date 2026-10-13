@@ -1,7 +1,7 @@
 """Findings: the disorder documentation format.
 
 A Finding is what Ghostline produces when it observes a failure pattern
-worth recording — whether it matches a known disorder or is a novelty
+worth recording -- whether it matches a known disorder or is a novelty
 candidate. The format is the contract with kiru: `ghostline report
 --upload` posts this JSON to the kiru API, where it enters the DEM-X
 lifecycle as an Anomaly candidate (opt-in only).

@@ -1,4 +1,4 @@
-"""Ghostline MCP server — thin wrapper over the battery registry.
+"""Ghostline MCP server -- thin wrapper over the battery registry.
 
 Exposes probe/report as MCP tools so any MCP-capable assistant can run
 diagnostics conversationally ("check my agent for goal drift").
@@ -16,16 +16,19 @@ def build_server():
     except ImportError:
         raise RuntimeError("pip install kiru-ghostline[mcp] to run the MCP server")
 
-    from .batteries import get as get_battery
     from .findings import Finding
     from .runner import resolve_target, run_batteries
 
     server = FastMCP("ghostline")
 
     @server.tool()
-    def probe_disorder(target: str, disorders: list[str] | None = None, max_calls: int = 200) -> dict:
+    def probe_disorder(
+        target: str, disorders: list[str] | None = None, max_calls: int = 200
+    ) -> dict:
         """Run Ghostline probe batteries against a target agent."""
-        report = run_batteries(resolve_target(target), slugs=disorders, max_calls=max_calls)
+        report = run_batteries(
+            resolve_target(target), slugs=disorders, max_calls=max_calls
+        )
         return report.to_dict()
 
     @server.tool()

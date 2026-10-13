@@ -13,7 +13,7 @@ the `ghostline` MCP server (`probe_disorder`, `finding_report` tools).
 
 ## How
 
-Prefer the MCP tools when available — they wrap the same battery registry
+Prefer the MCP tools when available -- they wrap the same battery registry
 as the CLI. For local runs:
 
 ```bash

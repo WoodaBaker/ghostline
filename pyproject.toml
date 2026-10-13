@@ -27,7 +27,7 @@ mcp = ["mcp>=1.0"]
 [project.urls]
 Homepage = "https://kiru.solutions/ghostline"
 Repository = "https://github.com/WoodaBaker/ghostline"
-Issues = "https://github.com/WoodaBaker/kiru/issues"
+Issues = "https://github.com/WoodaBaker/ghostline/issues"
 
 [project.scripts]
 ghostline = "kiru_ghostline.cli:main"

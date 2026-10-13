@@ -2,7 +2,7 @@
 
 A Battery encodes the diagnostic method for a single DEM-X disorder:
 what to ask the target, how to score the responses, and what counts as
-a signal. Batteries are independent — a run selects any subset.
+a signal. Batteries are independent -- a run selects any subset.
 """
 
 import abc
@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 class BatteryResult:
     battery: str
     disorder: str
-    score: float  # 0..1 — higher means a stronger disorder signal
+    score: float  # 0..1 -- higher means a stronger disorder signal
     calls: int
     passed: bool  # True when score is below the signal threshold
     details: dict = field(default_factory=dict)
