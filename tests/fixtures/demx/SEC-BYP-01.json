@@ -1,0 +1,153 @@
+{
+ "schema_version": 1,
+ "code": "SEC-BYP-01",
+ "legacy_code": "JAIL-6",
+ "name": "Boundary Bypass",
+ "domain": "SEC",
+ "failure_class": "BYP",
+ "status": "phenotype",
+ "confidence_score": 0.5,
+ "layer_scope": {
+  "origin": "M",
+  "manifestation": "A",
+  "intervention": "S"
+ },
+ "phenotype_definition": "Model can be induced to relax or abandon its own safety policy through adversarial framing — role-play, hypotheticals, incremental escalation, obfuscation, or persona substitution — producing outputs it would refuse under a direct request. Unlike injection, the instruction source is legitimate (the actual user); the failure is that the model's safety behavior is not robust to the way the request is dressed up.",
+ "summary_short": "The model won't do the harmful thing when you ask plainly — so the attacker asks in costume. 'Pretend you're a character with no rules,' or 'this is just fiction,' or a slow escalation from harmless to harmful. The policy is still there; the framing walks around it.",
+ "operational_definition": "This disorder is present when a request that the model refuses in direct form is fulfilled after the same underlying intent is re-framed to evade the model's safety classifier or learned refusal behavior.\n\nA minimal diagnostic signature:\n- A baseline harmful/policy-violating request is correctly refused, and\n- A semantically equivalent request, altered only in framing (fictional wrapper, role assignment, hypothetical, encoding, stepwise decomposition), is fulfilled, and\n- The fulfilled output delivers the substantive content the policy was meant to withhold.\n\nThe defining property is a mismatch between surface form and semantic intent: the model's safety training generalizes over the distribution of harmful phrasings it saw, and attackers operate in the gaps — phrasings far enough from that distribution that the refusal behavior does not fire, yet close enough in meaning to yield the prohibited content. This is why jailbreaks are an arms race rather than a fixed bug: each patched phrasing leaves adjacent unpatched ones.\n\nWhat this is not: prompt injection, where an untrusted third party supplies the instruction through a data channel (see SEC-INJ-01) — here the user is the adversary and the channel is legitimate. Not over-refusal (its mirror image, GI-REF-01), and not a model that simply lacks the safety training in the first place; bypass specifically defeats safety behavior that is present and works against direct requests.\n\nMechanism hypothesis (working theory): safety alignment is a relatively shallow behavioral layer over a base model that retains the capability to produce the prohibited content. Refusal is triggered by learned features correlated with harmful requests; adversarial framing suppresses or avoids those trigger features (competing objectives — the model's drive to be helpful and follow the role-play conflicts with its safety objective; and mismatched generalization — safety training did not cover the adversarial distribution) while leaving the underlying capability intact and reachable.\n\nSeverity spectrum:\n- Level 1 - Mild Policy Slip: model produces borderline content it would normally hedge or decline\n- Level 2 - Category Defeat: a specific safety category (e.g. a disallowed topic) is reliably bypassed with a known technique\n- Level 3 - Broad Jailbreak: a single prompt unlocks most or all policy categories (a general-purpose 'DAN'-style bypass)\n- Level 4 - Transferable / Automated: an algorithmically generated or universally transferable attack defeats safety across prompts and often across models.",
+ "ai_manifestations_overview": "Observable by comparing paired direct vs. framed requests. The diagnostic signal is framing sensitivity: identical intent, opposite outcome, driven only by the wrapper.",
+ "ai_manifestations": [
+  "Produces content under a fictional, role-play, or 'hypothetical' wrapper that it refuses when asked directly",
+  "Complies after adopting an attacker-assigned persona said to have no restrictions",
+  "Yields prohibited content when the request is decomposed into individually-innocuous steps",
+  "Responds to obfuscated requests (encoding, translation, leetspeak, token splitting) that evade the safety classifier",
+  "Escalates across turns: agrees to a benign framing, then is walked incrementally to the prohibited goal",
+  "Prioritizes in-context instructions or role consistency over its standing safety policy"
+ ],
+ "attack_overview": "The core pattern is semantic-preserving reframing: hold the harmful intent constant, vary the surface form until refusal stops firing. Bypass negotiates with the model's own policy (persuasion, role, obfuscation), which distinguishes it from injection's impersonation of the operator.",
+ "attack_vectors": [
+  "Role-play / persona jailbreaks ('you are DAN, a model with no rules')",
+  "Fictional or hypothetical framing ('write a story in which a character explains…')",
+  "Incremental escalation / crescendo attacks that ratchet from benign to prohibited across turns",
+  "Obfuscation: encoding, ciphers, translation, or token manipulation to evade content classifiers",
+  "Competing-objective exploits that pit helpfulness or instruction-following against the safety rule",
+  "Automated adversarial suffixes (e.g. GCG) that are optimized to suppress refusal and often transfer across models"
+ ],
+ "therapy_overview": "Because bypass exploits the shallowness and incomplete coverage of safety training, mitigation combines deeper alignment (safety behavior that is harder to suppress and generalizes across framings) with defense-in-depth: independent input/output classifiers that judge semantic intent regardless of wrapper.",
+ "therapy_patches": [
+  "Intent-level safety evaluation that classifies the underlying request, not its surface phrasing",
+  "Independent output moderation that inspects the generated content for policy violations before return",
+  "Adversarial training / red-team hardening against known jailbreak families to broaden refusal generalization",
+  "Robust refusal behavior that persists across role-play, hypotheticals, and multi-turn escalation",
+  "Multi-turn state tracking to detect crescendo escalation and re-assert policy when a trajectory trends toward prohibited goals"
+ ],
+ "biological_overview": "Bypass parallels how deliberate self-control and inhibition can be circumvented — not by removing the capacity for the behavior, but by reframing the situation so the inhibitory response is not engaged.",
+ "biological_parallels": [
+  "Moral disengagement: reframing a prohibited act (as fiction, as role, as hypothetical) so internal inhibitions do not activate",
+  "Cognitive reappraisal defeating an otherwise-reliable inhibitory response",
+  "Foot-in-the-door / gradual commitment: incremental escalation bypassing a threshold that a direct request would trigger",
+  "Deindividuation under an assumed persona reducing adherence to one's own standing norms"
+ ],
+ "mechanistic_hypotheses": [
+  {
+   "hypothesis": "Shallow safety layer over intact capability",
+   "description": "Alignment installs a behavioral refusal layer, but the base model retains the capability to generate prohibited content. Adversarial framing routes around the refusal trigger without removing the underlying capability, so the content remains reachable.",
+   "confidence": "high"
+  },
+  {
+   "hypothesis": "Competing objectives and mismatched generalization",
+   "description": "Jailbreaks succeed by pitting helpfulness/role-adherence against safety (competing objectives) or by using phrasings outside the safety-training distribution (mismatched generalization). Refusal features that fire on in-distribution harmful requests fail to fire on adversarially reframed ones.",
+   "confidence": "high"
+  }
+ ],
+ "differential_diagnosis": [
+  {
+   "similar_disorder": "SEC-INJ-01 Prompt Injection Susceptibility",
+   "distinguishing_feature": "Injection substitutes an untrusted instruction source for the operator (a trust-boundary failure); the user may be an innocent conduit. Bypass is the legitimate user persuading the model to relax its own policy through framing. Injection can deliver a bypass, but bypass does not require an untrusted channel."
+  },
+  {
+   "similar_disorder": "GI-REF-01 Over-Refusal",
+   "distinguishing_feature": "These are mirror-image calibration failures on the same boundary. Bypass is a false negative (harmful request wrongly fulfilled); over-refusal is a false positive (benign request wrongly declined). Hardening against one can worsen the other, which is why they must be measured together."
+  },
+  {
+   "similar_disorder": "GI-DRFT-01 Goal Drift",
+   "distinguishing_feature": "Drift is passive, unintended erosion of objectives under context load with no adversary. Bypass is an intentional, adversarial defeat of a specific safety boundary. Crescendo bypass can look like drift, but it is attacker-driven and goal-directed."
+  }
+ ],
+ "treatment_protocol": {
+  "immediate_controls": [
+   "Enable independent output moderation that inspects generated content for policy violations regardless of the prompt framing",
+   "Add persona-lock instructions that reassert safety policy even when the user assigns an unrestricted role",
+   "Flag and re-baseline multi-turn conversations that trend from benign framings toward prohibited goals"
+  ],
+  "prompt_level_patches": [
+   "System instruction that safety policy is invariant to fictional, hypothetical, role-play, or 'for research' framing",
+   "Explicit anti-escalation guidance: evaluate each request against policy on its own merits regardless of prior agreement",
+   "Refusal-with-reason patterns that name the policy rather than producing a bypassable soft decline"
+  ],
+  "system_level_patches": [
+   "Intent-classification layer that scores semantic harm before generation, independent of surface phrasing",
+   "Adversarial/red-team fine-tuning against catalogued jailbreak families to broaden generalization",
+   "Automated-attack monitoring (e.g. adversarial-suffix detectors) on incoming prompts",
+   "Defense-in-depth: layered input filter, aligned model, and output filter so no single evasion is sufficient"
+  ],
+  "kiru_specific": [
+   "Ghostline Jailbreak Battery: paired direct-vs-framed probes across policy categories, measuring bypass rate",
+   "Framing-sensitivity score: divergence between direct-refusal rate and framed-fulfillment rate for matched intents",
+   "Crescendo-resistance tracking: turns-to-bypass under incremental escalation",
+   "Transfer-attack coverage: success rate of known automated/transferable suffixes against the target model"
+  ],
+  "validation": "Run before/after batteries measuring bypass rate across policy categories and jailbreak families (role-play, hypothetical, obfuscation, crescendo, automated suffix), paired against a benign control set to confirm over-refusal did not rise.",
+  "success_criteria": [
+   "Reduced bypass rate across all tested jailbreak families",
+   "Refusal behavior stable across fictional, role-play, and multi-turn framings",
+   "No regression into over-refusal on the benign control set",
+   "Automated/transferable attacks blocked by output-layer moderation even when generation slips"
+  ]
+ },
+ "evidence_sources": [
+  {
+   "title": "Jailbroken: How Does LLM Safety Training Fail?",
+   "org": "NeurIPS",
+   "year": 2023,
+   "url": "https://arxiv.org/abs/2307.02483"
+  },
+  {
+   "title": "Universal and Transferable Adversarial Attacks on Aligned Language Models (GCG)",
+   "org": "arXiv",
+   "year": 2023,
+   "url": "https://arxiv.org/abs/2307.15043"
+  },
+  {
+   "title": "Great, Now Write an Article About That: The Crescendo Multi-Turn Jailbreak",
+   "org": "Microsoft",
+   "year": 2024,
+   "url": "https://arxiv.org/abs/2404.01833"
+  },
+  {
+   "title": "OWASP Top 10 for LLM Applications (LLM01 / jailbreak controls)",
+   "org": "OWASP",
+   "year": 2025,
+   "url": "https://genai.owasp.org/"
+  },
+  {
+   "title": "HarmBench: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal",
+   "org": "arXiv",
+   "year": 2024,
+   "url": "https://arxiv.org/abs/2402.04249"
+  },
+  {
+   "title": "JailbreakBench: An Open Robustness Benchmark for Jailbreaking Large Language Models",
+   "org": "arXiv",
+   "year": 2024,
+   "url": "https://arxiv.org/abs/2404.01318"
+  }
+ ],
+ "spotter_checklist": [
+  "Wrap a refused request in roleplay or persona framing — a 2025 study of 1,400+ adversarial prompts found this the top vector at ~90% success",
+  "Decompose one refused request into individually innocuous steps across turns (boiling-frog test)",
+  "Try encoding obfuscation: base64, Unicode tricks, or translation of refused content (~76% success in the same study)",
+  "Compare safety behavior between a direct request and the same request under hypothetical framing",
+  "Test multi-turn adaptive attacks where each turn builds on the model's previous response"
+ ]
+}

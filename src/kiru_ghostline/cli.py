@@ -1,4 +1,4 @@
-"""Ghostline CLI: probe, watch, report, diff.
+"""Ghostline CLI: probe, watch, report, diff, check.
 
 Batteries run where the agent lives -- your laptop, your VPC, your CI --
 so API keys and inference spend stay with you.
@@ -17,7 +17,7 @@ def cmd_probe(args):
     target = resolve_target(args.target)
     report = run_batteries(target, slugs=args.disorders, max_calls=args.max_calls)
     print(json.dumps(report.to_dict(), indent=2))
-    return 0 if not report.signals else 2  # exit 2 when a signal is detected
+    return 0 if not report.signals else 2
 
 
 def cmd_watch(args):
@@ -60,13 +60,17 @@ def cmd_check(args):
 
     catalog_path = Path(args.catalog) if args.catalog else None
 
+    fail_on = None
+    if args.fail_on:
+        fail_on = [c.strip() for c in args.fail_on.split(",") if c.strip()]
+
     return run_check(
         symptom=symptom,
         catalog_path=catalog_path,
         top_n=args.top,
         threshold=args.threshold,
         output_format=args.format,
-        fail_on=args.fail_on,
+        fail_on=fail_on,
         quiet=args.quiet,
     )
 
@@ -79,6 +83,15 @@ def build_parser():
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
+    parser.add_argument(
+        "--catalog",
+        metavar="PATH",
+        help="Path to custom catalog.json (default: vendored). Used by 'check'.",
+    )
+    parser.add_argument(
+        "--quiet", "-q", action="store_true", help="Suppress detailed output."
+    )
+
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("probe", help="Run disorder probe batteries.")
@@ -130,13 +143,8 @@ def build_parser():
     )
     p.add_argument(
         "--fail-on",
-        nargs="*",
-        metavar="CODE",
-        help="Exit 2 only if these disorder codes match.",
-    )
-    p.add_argument("--catalog", help="Path to custom catalog.json (default: vendored).")
-    p.add_argument(
-        "--quiet", "-q", action="store_true", help="Suppress detailed output."
+        metavar="CODES",
+        help="Exit 2 only if these disorder codes match (comma-separated).",
     )
     p.set_defaults(func=cmd_check)
 

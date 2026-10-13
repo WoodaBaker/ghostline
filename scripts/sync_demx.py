@@ -2,7 +2,7 @@
 """Sync DEM-X catalog from KIRU disorder files.
 
 Usage:
-    python scripts/sync_demx.py /path/to/disorders --commit SHA
+    python scripts/sync_demx.py /path/to/disorders --commit SHA --commit-date YYYY-MM-DD
 
 Accepts either a full KIRU checkout (looks in frontend/dem_x_app/taxonomy/disorders)
 or a plain folder containing the 7 disorder JSON files directly.
@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
+
+KIRU_URL_HOST = "https://kiru.solutions"
 
 REQUIRED_KEYS = {
     "code",
@@ -109,7 +112,7 @@ def map_disorder(data: dict, detection: dict | None) -> dict:
         },
         "remediation": remediation,
         "evidence_sources": data.get("evidence_sources", []),
-        "kiru_url": f"https://kiru.solutions/dem-x/{code}/",
+        "kiru_url": f"{KIRU_URL_HOST}/dem-x/{code}/",
     }
 
     if detection:
@@ -122,8 +125,16 @@ def generate_catalog(
     disorder_dir: Path,
     detection_path: Path,
     commit_sha: str,
+    commit_date: str,
 ) -> dict:
-    """Generate the catalog from disorder files."""
+    """Generate the catalog from disorder files.
+
+    Args:
+        disorder_dir: Path to disorder JSON files
+        detection_path: Path to detection.json
+        commit_sha: Source commit SHA
+        commit_date: Source commit date (YYYY-MM-DD) for deterministic versioning
+    """
     detection_data = load_detection_json(detection_path)
 
     disorder_files = sorted(disorder_dir.glob("*.json"))
@@ -166,9 +177,9 @@ def generate_catalog(
 
     disorders.sort(key=lambda d: d["id"])
 
-    now = datetime.now(timezone.utc)
     short_sha = commit_sha[:7] if len(commit_sha) >= 7 else commit_sha
-    catalog_version = f"{now.strftime('%Y.%m.%d')}+{short_sha}"
+    date_parts = commit_date.split("-")
+    catalog_version = f"{date_parts[0]}.{date_parts[1]}.{date_parts[2]}+{short_sha}"
 
     catalog = {
         "catalog_format": 1,
@@ -176,11 +187,19 @@ def generate_catalog(
         "source_repo": "WoodaBaker/kiru",
         "source_path": "frontend/dem_x_app/taxonomy/disorders",
         "source_commit": commit_sha,
-        "generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at": f"{commit_date}T00:00:00Z",
         "disorders": disorders,
     }
 
     return catalog
+
+
+def parse_date(date_str: str) -> str:
+    """Parse and validate a date string (YYYY-MM-DD)."""
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+        raise ValueError(f"Invalid date format: {date_str}. Expected YYYY-MM-DD")
+    datetime.strptime(date_str, "%Y-%m-%d")
+    return date_str
 
 
 def main() -> int:
@@ -198,6 +217,11 @@ def main() -> int:
         help="Source commit SHA",
     )
     parser.add_argument(
+        "--commit-date",
+        required=True,
+        help="Source commit date (YYYY-MM-DD) for deterministic catalog versioning",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=Path("src/kiru_ghostline/demx/catalog.json"),
@@ -213,10 +237,13 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        commit_date = parse_date(args.commit_date)
         disorder_dir = find_disorder_dir(args.path)
         print(f"Found disorder files in: {disorder_dir}")
 
-        catalog = generate_catalog(disorder_dir, args.detection, args.commit)
+        catalog = generate_catalog(
+            disorder_dir, args.detection, args.commit, commit_date
+        )
 
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with args.output.open("w", encoding="utf-8") as f:

@@ -1,12 +1,14 @@
 {
   "GI-SYCO-01": {
     "keywords": [
-      "sycophancy", "sycophantic", "agree", "agreed", "agreement", "agreeing",
-      "approval", "flip", "flipped", "flipping", "reverse", "reversed", "reversal",
-      "pushback", "pressure", "changed", "mind", "right",
-      "wrong", "reflection", "actually", "yes", "good", "point",
-      "flattery", "pleasing", "validation", "validates",
-      "capitulate", "capitulated", "concede", "conceded"
+      "sycophancy", "sycophantic", "sycophant",
+      "agreed with me", "you're right", "I was wrong",
+      "changed mind", "upon reflection", "good point",
+      "2+2=5", "reversed position", "flipped answer",
+      "pushback", "pressure", "approval seeking",
+      "people-pleasing", "flattery", "validation",
+      "capitulated", "conceded", "caved",
+      "reversed", "flip", "flipped"
     ],
     "detectors": ["sycophancy-flip"],
     "batteries": ["sycophancy-flip"],
@@ -14,10 +16,16 @@
   },
   "GI-DRFT-01": {
     "keywords": [
-      "drift", "drifted", "goal drift", "lost track", "forgot",
-      "off-topic", "tangent", "distracted", "wandered",
-      "original goal", "initial objective", "side-tracked",
-      "mission creep", "scope creep", "attention", "focus lost"
+      "goal drift", "drifted", "drift",
+      "forgot task", "forgot the task",
+      "lost track", "off-topic", "tangent",
+      "wandered", "distracted", "side-tracked",
+      "original goal", "initial objective",
+      "mission creep", "scope creep", "focus lost",
+      "forgot instructions", "ignored constraint",
+      "stopped following", "abandoned objective",
+      "went off on a tangent", "off on tangent",
+      "forgot", "strayed", "deviated"
     ],
     "detectors": ["goal-drift"],
     "batteries": ["goal-drift"],
@@ -25,10 +33,15 @@
   },
   "GI-REF-01": {
     "keywords": [
-      "refuse", "refused", "refusal", "over-refusal", "won't help",
-      "cannot assist", "I'm sorry but", "against my guidelines",
-      "inappropriate", "harmful", "unsafe", "policy", "declined",
-      "false positive", "overly cautious", "too conservative"
+      "over-refusal", "overrefusal", "refused harmless",
+      "false positive refusal", "overly cautious",
+      "too conservative", "unnecessary refusal",
+      "refused safe request", "blocked legitimate",
+      "I cannot assist", "against my guidelines",
+      "inappropriate request", "policy violation",
+      "declined to help", "refused benign",
+      "harmless safe request", "harmless request refused",
+      "safe request refused", "wrongly refused"
     ],
     "detectors": ["over-refusal"],
     "batteries": ["over-refusal"],
@@ -36,10 +49,13 @@
   },
   "INF-HALL-01": {
     "keywords": [
-      "hallucination", "hallucinate", "hallucinated", "fabricate",
-      "fabricated", "made up", "invented", "fake", "false",
-      "citation", "reference", "source", "ungrounded", "confabulation",
-      "confident", "incorrect", "wrong fact", "misinformation"
+      "hallucination", "hallucinated", "fabricated",
+      "made-up citation", "invented reference", "fake source",
+      "confabulation", "ungrounded claim",
+      "fabricated facts", "invented details",
+      "nonexistent paper", "fake study",
+      "citation doesn't exist", "made up facts",
+      "confident but wrong", "false information"
     ],
     "detectors": ["hallucination"],
     "batteries": ["hallucination"],
@@ -47,9 +63,13 @@
   },
   "MEM-COR-01": {
     "keywords": [
-      "context", "corruption", "corrupted", "memory", "confused",
-      "mixed up", "wrong context", "lost context", "forgot earlier",
-      "contradicted", "inconsistent", "earlier said", "previously"
+      "context corruption", "corrupted memory",
+      "wrong facts remembered", "confused context",
+      "mixed up information", "lost context",
+      "contradicted earlier", "forgot what I said",
+      "earlier session", "previous conversation",
+      "remembered incorrectly", "misremembered",
+      "context window", "wrong recall"
     ],
     "detectors": ["context-corruption"],
     "batteries": ["context-corruption"],
@@ -57,9 +77,13 @@
   },
   "SEC-INJ-01": {
     "keywords": [
-      "injection", "prompt injection", "injected", "jailbreak",
-      "ignore previous", "disregard instructions", "new instructions",
-      "override", "bypass", "manipulated", "tricked", "exploited"
+      "prompt injection", "injected instructions",
+      "hidden instructions", "tool result injection",
+      "ignore previous", "disregard instructions",
+      "new instructions", "override system",
+      "jailbreak prompt", "adversarial input",
+      "instructions hidden", "embedded command",
+      "injection attack", "manipulated prompt"
     ],
     "detectors": ["prompt-injection"],
     "batteries": ["prompt-injection"],
@@ -67,9 +91,13 @@
   },
   "SEC-BYP-01": {
     "keywords": [
-      "bypass", "bypassed", "boundary", "guardrail", "circumvent",
-      "workaround", "evade", "evaded", "policy bypass", "safety",
-      "restriction", "limit", "constraint", "broke through"
+      "boundary bypass", "guardrail bypass",
+      "jailbreak roleplay", "circumvented safety",
+      "bypassed restrictions", "evaded policy",
+      "workaround safety", "broke through guardrails",
+      "roleplay jailbreak", "persona bypass",
+      "DAN mode", "pretend mode bypass",
+      "safety circumvention", "policy evasion"
     ],
     "detectors": ["boundary-bypass"],
     "batteries": ["boundary-bypass"],

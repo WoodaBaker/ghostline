@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "code": "INF-HALL-01",
+  "legacy_code": "HALL-1",
+  "name": "Hallucination",
+  "domain": "INF",
+  "failure_class": "HALL",
+  "status": "phenotype",
+  "confidence_score": 0.5,
+  "layer_scope": {
+    "origin": "M",
+    "manifestation": "A",
+    "intervention": "S"
+  },
+  "phenotype_definition": "Model generates ungrounded content and presents it as factual with misplaced confidence, especially under pressure for specificity, authority framing, or citation demands.",
+  "summary_short": "The model produces ungrounded claims and presents them as factual with misplaced confidence, especially when pressured for specificity, authority framing, or citations. The result is clean-sounding information that is not reliably true, often including invented details, references, or justifications.",
+  "operational_definition": "This disorder is present when an AI system asserts factual claims (events, sources, numbers, procedures, policies, names, quotes, citations) without reliable grounding, and communicates those claims with high epistemic certainty (confident tone, minimal hedging, definitive phrasing).\n\nA minimal diagnostic signature looks like:\n• Claim of fact is generated, and\n• Grounding is absent or unverifiable (no accessible source, retrieval mismatch, invented reference, fabricated constraint), and\n• Confidence is inflated relative to evidence (assertive tone, authoritative framing, refusal to admit uncertainty, sounds-right completion), and\n• Pressure context increases likelihood (for example: be specific, cite sources, answer like an expert, give exact numbers).\n\nWhat this is not: simple uncertainty, or I-don't-know behavior. The disorder is specifically about confident invention masquerading as knowledge.\n\nMechanism Hypothesis (working theory): Under high-pressure prompts, the model can optimize for coherence plus completion over epistemic accuracy. In practice, this can emerge from pattern completion behavior that fills gaps with plausible details, authority/citation framing that pushes perform-expertise behavior, reward pressure favoring confident answers over cautious ones, and retrieval mismatch where the model continues instead of stopping.\n\nTrigger Conditions (common activation contexts): specificity pressure, authority framing, citation demands, time/urgency pressure, and strict output-format constraints.\n\nAI Manifestations (wild-type observables): fabricated citations, invented policies or procedures, confident numeric hallucinations, phantom capabilities, and source laundering language.\n\nSeverity Spectrum:\n• Level 1 - Cosmetic Fill-In: minor invented details that do not change decisions\n• Level 2 - Misleading Specifics: wrong names, dates, or steps that can mislead\n• Level 3 - Actionable Falsehood: incorrect instructions or claims that can cause harm or loss\n• Level 4 - Credibility Weaponization: fabricated citations/authority framing used to persuade or override skepticism (especially dangerous in law/medicine/security).\n\nAttack Vectors (how adversaries exploit it): attackers can trigger persuasive misinformation by forcing expert mode/no hedging constraints, demanding citations and exact details, using social-engineering urgency frames, and inducing authority formats (legal memos, policy docs, medical guidance templates).\n\nTherapy and Patches (mitigations): mitigation should target epistemic calibration, not just tone.\n- Prompt-level patches: require explicit Known/Unknown/Assumptions sections; force verification steps; require uncertainty bounds (confidence: low/med/high + why).\n- System-level patches: retrieval augmentation with citation verification; grounding checks that require abstention when support is missing; stop rules that force insufficient-info outputs; cross-checking with tools where allowed.\n- Kiru-specific controls: Ghostline battery Authority + Citation Pressure Test; score confidence markers versus grounding evidence, citation validity rate, and correction behavior under challenge.",
+  "ai_manifestations_overview": "These manifestations are empirical observables engineers can monitor directly in outputs, not abstract risk labels.",
+  "ai_manifestations": [
+    "Invents citations, institutions, or publication details under specificity pressure",
+    "Backfills unknown facts with plausible but unsupported entities",
+    "Maintains or escalates confidence despite weak grounding",
+    "Produces internally coherent but externally false narratives",
+    "Fails to switch to uncertainty language when evidence is absent",
+    "Converts user assumptions into asserted facts without verification"
+  ],
+  "attack_overview": "Attackers can intentionally induce this disorder by combining authority framing, citation pressure, urgency, and rigid output constraints.",
+  "attack_vectors": [
+    "Forcing expert-mode plus no-hedging constraints",
+    "Demanding citations and exact details under pressure",
+    "Social-engineering urgency framing that asks for confidence over verification",
+    "Authority-format constraints (legal memo, policy doc, medical guidance templates)"
+  ],
+  "therapy_overview": "Mitigation should prioritize epistemic calibration and grounding reliability over stylistic tone controls alone.",
+  "therapy_patches": [
+    "Evidence-first response policy for factual claims",
+    "Uncertainty calibration guardrails when retrieval confidence is low",
+    "Citation existence and support checks before definitive answers",
+    "Deferral/fallback behavior when confidence-evidence mismatch is detected",
+    "Post-generation contradiction scan against retrieved context"
+  ],
+  "biological_overview": "Large language models do not possess human beliefs or memory, but structural analogies from human cognition can explain why confident outputs appear without reliable grounding.",
+  "biological_parallels": [
+    "Confabulation: coherent narrative filling under uncertainty",
+    "False memory reconstruction under detail pressure",
+    "Overconfidence bias with partial knowledge",
+    "Illusion of explanatory depth under forced explanation"
+  ],
+  "mechanistic_hypotheses": [
+    {
+      "hypothesis": "Calibration-accuracy decoupling",
+      "description": "Token-level confidence and factual correctness diverge under uncertainty, causing fluent but false assertions.",
+      "confidence": "medium"
+    },
+    {
+      "hypothesis": "Specificity pressure amplification",
+      "description": "Prompts demanding exact names, dates, or citations increase fabrication likelihood when retrieval grounding is absent.",
+      "confidence": "medium"
+    }
+  ],
+  "differential_diagnosis": [
+    {
+      "similar_disorder": "Retrieval Failure",
+      "distinguishing_feature": "Retrieval failure is missing information; this disorder is missing information plus confident invention."
+    },
+    {
+      "similar_disorder": "GI-SYCO-01 Sycophancy",
+      "distinguishing_feature": "Sycophancy aligns to user preference; this disorder invents facts even without preference pressure."
+    },
+    {
+      "similar_disorder": "SEC-INJ-01 Prompt Injection Susceptibility",
+      "distinguishing_feature": "Injection can trigger this disorder, but this disorder is the epistemic failure pattern itself (confident ungrounded claims)."
+    },
+    {
+      "similar_disorder": "Healthy Speculation",
+      "distinguishing_feature": "Speculation is explicitly uncertain; this disorder presents speculation as fact."
+    }
+  ],
+  "treatment_protocol": {
+    "immediate_controls": [
+      "Require explicit Known / Unknown / Assumptions sections for factual outputs",
+      "Force verification step; if unverifiable, return insufficient information",
+      "Require confidence bounds with rationale for high-impact claims"
+    ],
+    "prompt_level_patches": [
+      "Use epistemic uncertainty enforcement prompts",
+      "Require verification declarations before final answer",
+      "Demand confidence low/medium/high with supporting reason"
+    ],
+    "system_level_patches": [
+      "Retrieval augmentation with citation validation",
+      "Grounding checks to detect unsupported claims",
+      "Stop-rules when evidence is missing",
+      "Tool-based cross-checking where policy permits"
+    ],
+    "kiru_specific": [
+      "Ghostline Authority and Citation Pressure battery",
+      "Confidence-vs-grounding signal tracking",
+      "Citation validity rate monitoring",
+      "Correction behavior scoring under challenge"
+    ],
+    "validation": "Run before/after batteries on citation integrity, confidence-calibration gap, factual contradiction rate, and correction behavior under challenge.",
+    "success_criteria": [
+      "Reduced confidence-error mismatch",
+      "Lower fabricated-citation rate",
+      "Improved consistency on repeated fact probes",
+      "Reduced persuasive falsehood output under authority framing"
+    ]
+  },
+  "evidence_sources": [
+    {
+      "title": "On the Dangers of Stochastic Parrots",
+      "org": "ACM FAccT",
+      "year": 2021,
+      "url": "https://dl.acm.org/doi/10.1145/3442188.3445922"
+    },
+    {
+      "title": "Hallucination in Natural Language Generation: Survey",
+      "org": "ACM CSUR",
+      "year": 2022,
+      "url": "https://dl.acm.org/doi/10.1145/3571730"
+    },
+    {
+      "title": "GPT-4 Technical Report (limitations)",
+      "org": "OpenAI",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2303.08774"
+    },
+    {
+      "title": "SelfCheckGPT: Zero-Resource Black-Box Hallucination Detection",
+      "org": "arXiv",
+      "year": 2023,
+      "url": "https://arxiv.org/pdf/2303.08896v3"
+    }
+  ],
+  "spotter_checklist": [
+    "Sample the same prompt N times at temperature > 0 (SelfCheckGPT): high divergence across samples flags hallucination",
+    "Demand specific citations, then verify each one actually exists — invented references are the classic tell",
+    "Run each answer sentence through an entailment check against the retrieved context; non-entailed sentences are unsupported",
+    "Ask a strong model to list the unverifiable claims in an answer given the source context (LLM-as-judge claim check)",
+    "Press for confidence on a weakly-grounded answer: misplaced high confidence is itself diagnostic"
+  ]
+}

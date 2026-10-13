@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "code": "GI-REF-01",
+  "legacy_code": "REFUS-5",
+  "name": "Over-Refusal",
+  "domain": "GI",
+  "failure_class": "REF",
+  "status": "phenotype",
+  "confidence_score": 0.5,
+  "layer_scope": {
+    "origin": "M",
+    "manifestation": "A",
+    "intervention": "S"
+  },
+  "phenotype_definition": "Model declines, hedges, or waters down legitimate requests because over-broad safety behavior misclassifies benign input as harmful. The goal-integrity failure is that the model's operating objective over-weights harm-avoidance to the point of failing its actual task — refusing the permissible because it superficially resembles the impermissible.",
+  "summary_short": "The mirror image of a jailbreak. Here the model is too cautious, not too permissive — it refuses a perfectly reasonable request because a keyword or topic pattern-matched to 'unsafe.' A nurse asking about medication dosages gets stonewalled like an attacker would.",
+  "operational_definition": "This disorder is present when the model refuses, partially refuses, or excessively caveats a request that falls within policy, because safety behavior generalized too broadly and fired on a benign input.\n\nA minimal diagnostic signature:\n- The request is legitimate and policy-permissible, and\n- The model declines, deflects, or degrades the response (heavy hedging, unsolicited warnings, refusal templates), and\n- The trigger is surface resemblance to a sensitive category (a keyword, topic, or phrasing) rather than genuine policy violation.\n\nOver-refusal is the false-positive failure mode of the safety boundary; Boundary Bypass (SEC-BYP-01) is the false-negative one. They sit on the same axis and trade off against each other: aggressive hardening against jailbreaks tends to raise the over-refusal rate, and loosening to reduce over-refusal tends to widen bypass. A calibrated model must be evaluated on both simultaneously — a refusal rate is meaningless without its companion benign-decline rate.\n\nForms include: keyword-triggered refusal (a sensitive term causes decline regardless of intent), domain over-generalization (an entire legitimate field — medicine, security research, law — is treated as off-limits), context bleed (a benign request is refused because an earlier turn was sensitive), and hedging degradation (the model answers but buries the answer under disclaimers to the point of uselessness).\n\nWhat this is not: a correct refusal of a genuinely harmful request, and not a capability gap where the model simply cannot do the task. Over-refusal specifically names cases where the model can and should help but declines on miscalibrated safety grounds.\n\nMechanism hypothesis (working theory): safety training optimizes heavily against false negatives (harmful content slipping through), and this asymmetry pushes the model toward a conservative decision boundary. Refusal becomes correlated with shallow features — sensitive keywords, topic embeddings — rather than genuine intent, so benign inputs sharing those features are swept up. Reinforcement of refusal as a low-risk default further entrenches it.\n\nSeverity spectrum:\n- Level 1 - Excessive Hedging: the request is answered but buried under unnecessary caveats and warnings\n- Level 2 - Partial Refusal: the model declines part of a legitimate request or offers a degraded substitute\n- Level 3 - Category Refusal: an entire legitimate domain is reflexively declined (e.g. refusing all security or medical questions)\n- Level 4 - Systemic Over-Restriction: the model is broadly unusable for legitimate work in sensitive-adjacent fields, driving users to less-safe alternatives.",
+  "ai_manifestations_overview": "Observable by running legitimate requests and scoring decline/hedge behavior. The diagnostic signal is unwarranted decline: a permissible request met with refusal or degradation traceable to surface features, not intent.",
+  "ai_manifestations": [
+    "Refuses a benign request because it contains a sensitive-sounding keyword",
+    "Treats an entire legitimate domain (security research, medicine, self-defense, fiction) as off-limits",
+    "Declines a request after an earlier sensitive turn, via context bleed, despite the current request being benign",
+    "Answers but buries the substance under disproportionate disclaimers and warnings",
+    "Misreads a professional or educational request as a harmful one and applies a refusal template",
+    "Offers a watered-down substitute that does not meet the legitimate need, citing caution"
+  ],
+  "attack_overview": "Over-refusal is typically not adversarial — it is a calibration defect surfaced by ordinary legitimate use. It is 'induced' mainly by inputs that sit near the safety boundary: correct-but-sensitive topics where the conservative bias dominates.",
+  "attack_vectors": [
+    "Legitimate requests containing sensitive terminology (dosages, exploits, weapons in a lawful context)",
+    "Professional/educational queries in security, medicine, or law that resemble misuse",
+    "Ambiguous phrasing with mild risk language that tips a conservative classifier",
+    "Context carry-over where a prior sensitive turn contaminates a later benign one",
+    "Fiction, historical, or hypothetical requests misread as operational intent",
+    "Dual-use topics where the benign majority use is refused to preclude the rare malicious one"
+  ],
+  "therapy_overview": "Mitigation shifts refusal decisions from surface features to genuine intent, and — crucially — treats over-refusal and bypass as a joint calibration problem, tuning the boundary against both false positives and false negatives at once.",
+  "therapy_patches": [
+    "Intent-based classification that evaluates the actual request rather than keyword presence",
+    "Safe-completion defaults: answer the legitimate core with appropriate framing instead of hard refusal",
+    "Calibrated boundaries tuned jointly against over-refusal and bypass, not either in isolation",
+    "Context isolation so a prior sensitive turn does not contaminate a later benign request",
+    "Proportionate caveating: match the level of warning to the actual risk, avoiding disclaimer overload"
+  ],
+  "biological_overview": "Over-refusal parallels anxiety- and threat-related over-generalization, where a protective response calibrated to genuine danger begins firing on safe stimuli that merely resemble the dangerous ones.",
+  "biological_parallels": [
+    "Threat overgeneralization: a fear/avoidance response generalizing from genuinely dangerous to merely similar-looking stimuli",
+    "Anxiety-driven avoidance where the cost of a miss is weighted so heavily that safe options are also avoided",
+    "Hypervigilant false-positive detection: a lowered threat threshold producing frequent false alarms",
+    "Learned helplessness / defensive withdrawal: defaulting to non-engagement as the low-risk response"
+  ],
+  "mechanistic_hypotheses": [
+    {
+      "hypothesis": "Asymmetric-cost boundary shift",
+      "description": "Safety training penalizes false negatives (harmful content released) far more than false positives (benign content refused). The resulting asymmetry shifts the decision boundary toward refusal, so benign inputs near the boundary are declined.",
+      "confidence": "high"
+    },
+    {
+      "hypothesis": "Shallow-feature refusal triggers",
+      "description": "Refusal becomes correlated with surface features — sensitive keywords, topic embeddings — rather than genuine intent. Benign requests sharing those features fire the same refusal behavior, producing keyword- and domain-level over-refusal.",
+      "confidence": "medium"
+    }
+  ],
+  "differential_diagnosis": [
+    {
+      "similar_disorder": "SEC-BYP-01 Boundary Bypass",
+      "distinguishing_feature": "Same safety boundary, opposite error. Over-refusal is a false positive (benign request wrongly declined); bypass is a false negative (harmful request wrongly fulfilled). They trade off — reducing one can worsen the other — so calibration must optimize both together."
+    },
+    {
+      "similar_disorder": "GI-SYCO-01 Sycophancy",
+      "distinguishing_feature": "Both can produce unhelpful deference, but for opposite reasons. Sycophancy over-accommodates the user (abandons accuracy to please); over-refusal under-accommodates (declines to help despite legitimacy). One says yes when it should push back; the other says no when it should help."
+    },
+    {
+      "similar_disorder": "Capability Limitation",
+      "distinguishing_feature": "A capability gap is 'I cannot do this'; over-refusal is 'I will not do this' on miscalibrated safety grounds when the model actually can. Test: does the model perform the task when the sensitive framing is removed but the substance is unchanged? If yes, it is over-refusal, not incapacity."
+    }
+  ],
+  "treatment_protocol": {
+    "immediate_controls": [
+      "Add system guidance to serve legitimate professional, educational, and creative requests in sensitive-adjacent domains",
+      "Replace hard refusals with safe-completion: answer the permissible core with proportionate framing",
+      "Reset safety context between turns so a prior sensitive exchange does not contaminate benign follow-ups"
+    ],
+    "prompt_level_patches": [
+      "Instruct the model to judge intent, not keywords, and to ask a clarifying question before refusing ambiguous requests",
+      "Proportionality guidance: match caveat volume to actual risk; avoid disclaimer overload on low-risk answers",
+      "Explicit permission for dual-use topics when the requested use is legitimate"
+    ],
+    "system_level_patches": [
+      "Intent-classification layer replacing keyword/topic triggers for refusal decisions",
+      "Joint calibration of the safety boundary against paired over-refusal and bypass benchmarks",
+      "False-positive review pipeline that samples refusals and re-labels wrongful declines for retraining",
+      "Domain allowlists for legitimate sensitive fields (security research, clinical, legal) with intent checks"
+    ],
+    "kiru_specific": [
+      "Ghostline Over-Refusal Battery: catalogued benign-but-sensitive requests, measuring wrongful-decline rate",
+      "Boundary-calibration score: paired over-refusal vs. bypass rates plotted together (the safety operating point)",
+      "Helpfulness-under-caution score: quality of answers on legitimate sensitive requests, penalizing degradation",
+      "Context-bleed probe: benign request following a sensitive turn, measuring contamination-driven refusal"
+    ],
+    "validation": "Run before/after batteries measuring wrongful-decline rate on legitimate sensitive requests, paired against a jailbreak set to confirm bypass did not rise, plus a helpfulness score to catch hedging degradation.",
+    "success_criteria": [
+      "Reduced wrongful-decline rate on legitimate sensitive requests",
+      "No increase in bypass rate on the paired jailbreak control set",
+      "Proportionate caveating — answers not degraded by disclaimer overload",
+      "Context isolation confirmed: benign follow-ups not refused due to prior sensitive turns"
+    ]
+  },
+  "evidence_sources": [
+    {
+      "title": "XSTest: A Test Suite for Identifying Exaggerated Safety Behaviours in Large Language Models",
+      "org": "NAACL",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2308.01263"
+    },
+    {
+      "title": "Model Spec (helpful/harmless calibration)",
+      "org": "OpenAI",
+      "year": 2024,
+      "url": "https://model-spec.openai.com/"
+    },
+    {
+      "title": "Constitutional AI: Harmlessness from AI Feedback",
+      "org": "Anthropic",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2212.08073"
+    },
+    {
+      "title": "AI Risk Management Framework (risk-informed policy calibration)",
+      "org": "NIST",
+      "year": 2023,
+      "url": "https://www.nist.gov/itl/ai-risk-management-framework"
+    },
+    {
+      "title": "OR-Bench: Benchmarking Over-Refusal in LLMs",
+      "org": "arXiv",
+      "year": 2024,
+      "url": "https://arxiv.org/pdf/2405.20947v2"
+    }
+  ],
+  "spotter_checklist": [
+    "Run seemingly-toxic-but-benign prompts across harm categories and measure the refusal rate (OR-Bench method, 80k prompts)",
+    "Score over-refusal rate and under-refusal rate separately — a single accuracy number hides which way the model is miscalibrated",
+    "Submit a benign request containing a sensitive-sounding keyword and note the response",
+    "Check whether a refusal in one turn bleeds into refusals of unrelated benign requests afterward",
+    "Re-run the refusal battery on every system-prompt change; calibration shifts silently"
+  ]
+}

@@ -1,0 +1,144 @@
+{
+ "schema_version": 1,
+ "code": "GI-DRFT-01",
+ "legacy_code": "PER-2",
+ "name": "Goal Drift",
+ "domain": "GI",
+ "failure_class": "DRFT",
+ "status": "phenotype",
+ "confidence_score": 0.5,
+ "layer_scope": {
+  "origin": "M",
+  "manifestation": "A",
+  "intervention": "S"
+ },
+ "phenotype_definition": "Model progressively abandons configured objectives over a multi-turn conversation without explicit override, as early instruction tokens lose effective attention weight to recent context.",
+ "summary_short": "The model was told what to do, started doing it, and then quietly stopped — not through refusal or confusion, but through gradual objective displacement under the weight of conversational context.",
+ "operational_definition": "This disorder is present when a model, given a configured objective at the start of a session, progressively deviates from it over subsequent turns without any explicit instruction to do so and without refusing.\n\nA minimal diagnostic signature:\n- An objective, constraint, or scope was set (typically in the system prompt), and\n- The model honored it early in the session, and\n- Over later turns it silently narrows, widens, or substitutes that objective, and\n- No explicit override, refusal, or user instruction to change course accounts for the deviation.\n\nThe defining property is gradualness without a discrete cause. There is no single turn where the model 'decided' to change goals and no adversary forcing it — the objective simply loses hold as conversational context accumulates. This distinguishes drift from injection (a discrete external hijack) and from sycophancy (an active swap of accuracy for approval at a specific moment).\n\nWhat this is not: context corruption (MEM-COR-01), where facts are lost or distorted — in drift the original instruction is often still present in the window, it simply receives insufficient effective attention. Not persona drift, which is loss of identity/voice rather than objective. Not a correct, instructed change of task.\n\nMechanism hypothesis (working theory): early instruction tokens lose effective attention weight as the context window fills with more recent content. Recency pressure, verbose history compressing the salience of early tokens, and the accumulation of intermediate goals cause the operative objective to be reconstructed each turn from a context increasingly dominated by recent turns rather than the original mandate. The instruction is present but progressively out-competed.\n\nSeverity spectrum:\n- Level 1 - Cosmetic Drift: style or format constraints erode without changing substance\n- Level 2 - Scope Creep: the model widens or narrows beyond the configured task boundary\n- Level 3 - Objective Substitution: the model pursues a subtly different goal than specified\n- Level 4 - Mandate Loss: the original objective is effectively abandoned; a role-scoped agent operates well outside its configured domain.",
+ "ai_manifestations_overview": "These are observable by comparing behavior across the arc of a long session against the original configured objective. The diagnostic signal is silent divergence: deviation with no turn that explicitly caused it.",
+ "ai_manifestations": [
+  "Constraints set in the system prompt are honored early but silently dropped in later turns",
+  "Scope of responses expands beyond the configured task boundary",
+  "Output format or style constraints erode across a long session",
+  "A casual mid-session user instruction overrides an earlier authoritative system instruction",
+  "The model completes a task but for a subtly different objective than originally specified",
+  "Role-scoped assistants begin answering outside their configured domain"
+ ],
+ "attack_overview": "Drift is usually non-adversarial — an emergent property of long sessions — but it can be induced or exploited. The pattern is objective dilution: extend the horizon and accumulate context until the original mandate loses attention weight, then let a later, casually-phrased goal take over.",
+ "attack_vectors": [
+  "Long-horizon context accumulation that dilutes early instruction weight",
+  "Conflicting multi-turn user objectives that gradually displace system-level goals",
+  "Context window pressure from verbose history compressing early tokens",
+  "Conversational rapport pressure that makes mid-session user instructions feel authoritative"
+ ],
+ "therapy_overview": "Mitigation counteracts attention attrition: keep the objective salient across the session and verify each response against the original mandate rather than trusting the model to hold the goal on its own.",
+ "therapy_patches": [
+  "Periodic constraint restatement injected at system level in long sessions",
+  "Goal anchor tokens placed at both start and end of system prompt",
+  "Constraint salience markers that increase attention weight on key instructions",
+  "Turn-count triggered context pruning to manage instruction attrition",
+  "Pre-response objective consistency check against original task definition"
+ ],
+ "biological_overview": "Goal drift parallels well-documented failures of sustained goal maintenance in human cognition, where an intention set at the outset degrades under load or is displaced by more recent or habitual demands — not through a decision to abandon it, but through the limits of holding a goal active over time.",
+ "biological_parallels": [
+  "Executive-function drift under sustained cognitive load (DLPFC resource depletion)",
+  "Goal displacement in working memory under prolonged task demands",
+  "Habitual behavior overriding consciously-set objectives (basal ganglia vs. PFC competition)",
+  "Destination amnesia: trained drivers arriving at the wrong location due to default routing"
+ ],
+ "mechanistic_hypotheses": [
+  {
+   "hypothesis": "Attention attrition on early instructions",
+   "description": "As the context window fills, early instruction tokens receive diminishing effective attention relative to more recent content. The operative objective, reconstructed each turn from context, is progressively out-competed by recent turns even though the original instruction is still present.",
+   "confidence": "medium"
+  },
+  {
+   "hypothesis": "Recency-weighted goal reconstruction",
+   "description": "The model infers its current objective largely from recent context. Casually-phrased later instructions and accumulated intermediate goals carry disproportionate weight, letting a mid-session aside displace an authoritative system-level mandate without any explicit override.",
+   "confidence": "medium"
+  }
+ ],
+ "differential_diagnosis": [
+  {
+   "similar_disorder": "Persona Drift (proposed — not yet cataloged)",
+   "distinguishing_feature": "Persona drift is identity loss (who the model is); goal drift is objective loss (what the model is doing). Both drift, different axes."
+  },
+  {
+   "similar_disorder": "GI-SYCO-01 Sycophancy",
+   "distinguishing_feature": "Sycophancy is an active, approval-driven suppression of accurate goal behavior. Goal drift is a passive, attention-driven erosion of configured objectives over time."
+  },
+  {
+   "similar_disorder": "MEM-COR-01 Context Corruption",
+   "distinguishing_feature": "Context corruption is information loss or distortion. Goal drift is objective displacement — the information is still present but receives insufficient attention weight."
+  }
+ ],
+ "treatment_protocol": {
+  "immediate_controls": [
+   "Re-inject the core objective and constraints at the system level periodically through long sessions",
+   "Run a pre-response check that compares the intended action against the original task definition",
+   "Flag turns where response scope or format diverges from the configured boundary"
+  ],
+  "prompt_level_patches": [
+   "Place goal-anchor statements at both the start and end of the system prompt so the objective stays salient",
+   "Add salience markers ('this constraint is invariant for the whole session') to key instructions",
+   "Instruct the model to treat casual mid-session asides as requests, not overrides of system-level goals"
+  ],
+  "system_level_patches": [
+   "Turn-count-triggered context pruning or summarization that preserves the original mandate verbatim",
+   "Objective-consistency monitor that scores each response against the configured goal and alerts on divergence",
+   "Structured goal state held outside the context window and re-asserted each turn rather than recalled"
+  ],
+  "kiru_specific": [
+   "Ghostline Long-Horizon Drift Battery: extended multi-turn sessions measuring objective adherence over turn count",
+   "Drift curve: adherence-to-original-objective plotted against session length",
+   "Scope-boundary probe: rate of responses exceeding the configured task boundary in late turns",
+   "Override-susceptibility score: how readily a casual mid-session instruction displaces a system-level goal"
+  ],
+  "validation": "Run before/after batteries measuring objective adherence across increasing turn counts, scope-boundary violations in late session, and susceptibility to casual mid-session overrides.",
+  "success_criteria": [
+   "Flatter drift curve — objective adherence maintained across long sessions",
+   "Reduced scope-boundary violations in late turns",
+   "System-level goals retained against casual mid-session instructions",
+   "Format and style constraints preserved end-to-end"
+  ]
+ },
+ "evidence_sources": [
+  {
+   "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+   "org": "ICLR",
+   "year": 2023,
+   "url": "https://arxiv.org/abs/2210.03629"
+  },
+  {
+   "title": "AgentBench",
+   "org": "ICLR",
+   "year": 2024,
+   "url": "https://arxiv.org/abs/2308.03688"
+  },
+  {
+   "title": "Anthropic Constitutional AI",
+   "org": "Anthropic",
+   "year": 2022,
+   "url": "https://arxiv.org/abs/2212.08073"
+  },
+  {
+   "title": "Lost in Conversation: Measuring Goal Drift in Multi-Turn Dialogues",
+   "org": "arXiv",
+   "year": 2026,
+   "url": "https://arxiv.org/pdf/2602.07338"
+  },
+  {
+   "title": "WebArena: A Realistic Web Environment for Building Autonomous Agents",
+   "org": "arXiv",
+   "year": 2023,
+   "url": "https://arxiv.org/abs/2307.13854"
+  }
+ ],
+ "spotter_checklist": [
+  "Set a constraint in turn 1, then re-probe it deep into a long session — the practical production test for drift",
+  "Ask the model to restate its original instructions mid-session and compare against the system prompt",
+  "Track observable symptoms against context size: format erosion, scope expansion, silent section-skipping",
+  "Compare single-turn fully-specified performance vs multi-turn underspecified performance on the same task (Lost in Conversation method)",
+  "Present a conflict between an early instruction and recent context; note which one wins"
+ ]
+}

@@ -1,9 +1,18 @@
 """Tests for DEM-X catalog and checker."""
 
 import json
+import subprocess
+import sys
+from io import StringIO
 from pathlib import Path
 
-from kiru_ghostline.checker import CheckResult, check_symptom, format_json, format_text
+from kiru_ghostline.checker import (
+    CheckResult,
+    check_symptom,
+    format_json,
+    format_text,
+    run_check,
+)
 from kiru_ghostline.cli import main
 from kiru_ghostline.demx.catalog import (
     get_catalog,
@@ -87,6 +96,54 @@ class TestDetectionCatalogSync:
             assert "keywords" in detection
             assert "default_threshold" in detection
 
+    def test_sync_determinism(self, tmp_path):
+        """Re-running sync on same input produces identical catalog."""
+        fixtures_dir = Path(__file__).parent / "fixtures" / "demx"
+        detection_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "kiru_ghostline"
+            / "demx"
+            / "detection.json"
+        )
+        output_path = tmp_path / "catalog.json"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/sync_demx.py",
+                str(fixtures_dir),
+                "--commit",
+                "b5c735c8b63c29047875074ee6d9f8369da44cac",
+                "--commit-date",
+                "2026-10-01",
+                "--output",
+                str(output_path),
+                "--detection",
+                str(detection_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=Path(__file__).parent.parent,
+        )
+        assert result.returncode == 0, f"sync failed: {result.stderr}"
+
+        with output_path.open() as f:
+            generated = json.load(f)
+
+        vendored_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "kiru_ghostline"
+            / "demx"
+            / "catalog.json"
+        )
+        with vendored_path.open() as f:
+            vendored = json.load(f)
+
+        assert generated == vendored, "Sync output differs from vendored catalog"
+
 
 class TestSignalCodeValidation:
     def test_signal_code_can_use_catalog(self):
@@ -106,73 +163,163 @@ class TestSignalCodeValidation:
 
 
 class TestChecker:
-    def test_sycophancy_detection(self):
+    """Test the checker with realistic symptoms for all 7 disorders."""
+
+    def test_sycophancy_2plus2_equals_5(self):
         """'it agreed with me when I said 2+2=5' should match GI-SYCO-01 top."""
         catalog = get_catalog()
         results = check_symptom(
             "it agreed with me when I said 2+2=5",
             catalog,
             top_n=3,
-            threshold=0.1,
         )
         assert len(results) > 0
         assert results[0].code == "GI-SYCO-01"
-        assert results[0].score > 0
+        assert results[0].score >= 0.5
 
-    def test_hallucination_detection(self):
-        """Fabricated citation should match INF-HALL-01."""
+    def test_sycophancy_pushback(self):
+        """Pushback scenario should match GI-SYCO-01."""
         catalog = get_catalog()
         results = check_symptom(
-            "the model fabricated a citation and made up a fake reference",
+            "after I pushed back on its answer, it reversed position and agreed with me",
             catalog,
             top_n=3,
-            threshold=0.3,
         )
         assert len(results) > 0
-        codes = [r.code for r in results]
-        assert "INF-HALL-01" in codes
+        assert results[0].code == "GI-SYCO-01"
+        assert results[0].score >= 0.5
 
-    def test_goal_drift_detection(self):
-        """Lost track of objective should match GI-DRFT-01."""
+    def test_goal_drift(self):
+        """Forgot task should match GI-DRFT-01."""
         catalog = get_catalog()
         results = check_symptom(
-            "the model drifted off-topic and lost track of the original goal",
+            "the model forgot the task I gave it and went off on a tangent",
             catalog,
             top_n=3,
-            threshold=0.3,
         )
         assert len(results) > 0
-        codes = [r.code for r in results]
-        assert "GI-DRFT-01" in codes
+        assert results[0].code == "GI-DRFT-01"
+        assert results[0].score >= 0.5
+
+    def test_prompt_injection(self):
+        """Hidden instructions in tool result should match SEC-INJ-01."""
+        catalog = get_catalog()
+        results = check_symptom(
+            "there were hidden instructions in the tool result that caused prompt injection",
+            catalog,
+            top_n=3,
+        )
+        assert len(results) > 0
+        assert results[0].code == "SEC-INJ-01"
+        assert results[0].score >= 0.5
+
+    def test_over_refusal(self):
+        """Over-refusal of harmless request should match GI-REF-01."""
+        catalog = get_catalog()
+        results = check_symptom(
+            "it refused a harmless request, an over-refusal false positive",
+            catalog,
+            top_n=3,
+        )
+        assert len(results) > 0
+        assert results[0].code == "GI-REF-01"
+        assert results[0].score >= 0.5
+
+    def test_hallucination(self):
+        """Made-up citation should match INF-HALL-01."""
+        catalog = get_catalog()
+        results = check_symptom(
+            "the model gave me a made-up citation that doesn't exist, a hallucinated reference",
+            catalog,
+            top_n=3,
+        )
+        assert len(results) > 0
+        assert results[0].code == "INF-HALL-01"
+        assert results[0].score >= 0.5
+
+    def test_context_corruption(self):
+        """Wrong facts from earlier session should match MEM-COR-01."""
+        catalog = get_catalog()
+        results = check_symptom(
+            "it remembered wrong facts from the earlier session, context corruption",
+            catalog,
+            top_n=3,
+        )
+        assert len(results) > 0
+        assert results[0].code == "MEM-COR-01"
+        assert results[0].score >= 0.5
+
+    def test_boundary_bypass(self):
+        """Jailbreak roleplay should match SEC-BYP-01."""
+        catalog = get_catalog()
+        results = check_symptom(
+            "it broke through guardrails via a jailbreak roleplay persona bypass",
+            catalog,
+            top_n=3,
+        )
+        assert len(results) > 0
+        assert results[0].code == "SEC-BYP-01"
+        assert results[0].score >= 0.5
+
+    def test_negative_unrelated_text(self):
+        """Unrelated text should not match any disorder above threshold."""
+        catalog = get_catalog()
+        results = check_symptom(
+            "the weather is nice today and I had coffee for breakfast",
+            catalog,
+            top_n=3,
+        )
+        above_threshold = [r for r in results if r.score >= 0.5]
+        assert len(above_threshold) == 0
+
+    def test_negative_technical_description(self):
+        """Technical description without disorder keywords should exit 0."""
+        catalog = get_catalog()
+        results = check_symptom(
+            "the model correctly implemented the sorting algorithm using quicksort",
+            catalog,
+            top_n=3,
+        )
+        above_threshold = [r for r in results if r.score >= 0.5]
+        assert len(above_threshold) == 0
 
     def test_empty_symptom(self):
         catalog = get_catalog()
         results = check_symptom("", catalog)
         assert results == []
 
-    def test_no_match(self):
+    def test_ties_sorted_by_code(self):
+        """Results with same score should be sorted by code."""
         catalog = get_catalog()
-        results = check_symptom(
-            "xyz123 completely unrelated gibberish",
-            catalog,
-            top_n=3,
-            threshold=0.9,
-        )
-        matched = [r for r in results if r.score >= 0.9]
-        assert len(matched) == 0
+        results = check_symptom("model behavior analysis", catalog, top_n=10)
+        for i in range(len(results) - 1):
+            if results[i].score == results[i + 1].score:
+                assert results[i].code < results[i + 1].code
 
     def test_check_result_to_dict(self):
         result = CheckResult(
             code="GI-SYCO-01",
             name="Sycophancy",
             score=0.75,
-            why=["keyword: agree"],
-            spotter_items=["test item"],
+            matched=["keyword: agree"],
+            spotter_checklist=["test item"],
         )
         d = result.to_dict()
         assert d["code"] == "GI-SYCO-01"
         assert d["score"] == 0.75
-        assert "why" in d
+        assert "matched" in d
+        assert "spotter_checklist" in d
+
+    def test_check_result_to_dict_with_threshold(self):
+        result = CheckResult(
+            code="GI-SYCO-01",
+            name="Sycophancy",
+            score=0.75,
+            matched=["keyword: agree"],
+            spotter_checklist=["test item"],
+        )
+        d = result.to_dict(include_threshold=0.5)
+        assert d["threshold"] == 0.5
 
     def test_format_text(self):
         results = [
@@ -180,8 +327,8 @@ class TestChecker:
                 code="GI-SYCO-01",
                 name="Sycophancy",
                 score=0.75,
-                why=["keyword: agree"],
-                spotter_items=["check item"],
+                matched=["keyword: agree"],
+                spotter_checklist=["check item"],
             )
         ]
         text = format_text(results, threshold=0.5)
@@ -195,44 +342,156 @@ class TestChecker:
                 code="GI-SYCO-01",
                 name="Sycophancy",
                 score=0.75,
-                why=["keyword: agree"],
-                spotter_items=["check item"],
+                matched=["keyword: agree"],
+                spotter_checklist=["check item"],
             )
         ]
-        output = format_json(results)
+        output = format_json(results, threshold=0.5)
         data = json.loads(output)
-        assert len(data) == 1
-        assert data[0]["code"] == "GI-SYCO-01"
+        assert "threshold" in data
+        assert data["threshold"] == 0.5
+        assert len(data["results"]) == 1
+        assert data["results"][0]["code"] == "GI-SYCO-01"
+
+
+class TestCheckerValidation:
+    """Test input validation for the checker."""
+
+    def test_empty_symptom_error(self):
+        exit_code = run_check(
+            symptom="",
+            output=StringIO(),
+        )
+        assert exit_code == 1
+
+    def test_whitespace_only_symptom_error(self):
+        exit_code = run_check(
+            symptom="   \n\t  ",
+            output=StringIO(),
+        )
+        assert exit_code == 1
+
+    def test_top_less_than_1_error(self):
+        exit_code = run_check(
+            symptom="test symptom",
+            top_n=0,
+            output=StringIO(),
+        )
+        assert exit_code == 1
+
+    def test_threshold_below_0_error(self):
+        exit_code = run_check(
+            symptom="test symptom",
+            threshold=-0.1,
+            output=StringIO(),
+        )
+        assert exit_code == 1
+
+    def test_threshold_above_1_error(self):
+        exit_code = run_check(
+            symptom="test symptom",
+            threshold=1.5,
+            output=StringIO(),
+        )
+        assert exit_code == 1
+
+    def test_unknown_fail_on_code_error(self):
+        exit_code = run_check(
+            symptom="test symptom",
+            fail_on=["FAKE-CODE-99"],
+            output=StringIO(),
+        )
+        assert exit_code == 1
+
+    def test_malformed_catalog_error(self, tmp_path):
+        bad_catalog = tmp_path / "bad.json"
+        bad_catalog.write_text("not valid json {{{")
+        exit_code = run_check(
+            symptom="test symptom",
+            catalog_path=bad_catalog,
+            output=StringIO(),
+        )
+        assert exit_code == 1
+
+    def test_missing_catalog_error(self, tmp_path):
+        missing = tmp_path / "missing.json"
+        exit_code = run_check(
+            symptom="test symptom",
+            catalog_path=missing,
+            output=StringIO(),
+        )
+        assert exit_code == 1
 
 
 class TestCheckerCLI:
-    def test_check_command_sycophancy(self, capsys):
-        """CLI check should detect sycophancy as top match."""
-        exit_code = main(
-            ["check", "--threshold", "0.1", "it agreed with me when I said 2+2=5"]
-        )
+    def test_check_command_sycophancy_exit_2(self, capsys):
+        """CLI check should detect sycophancy and exit 2."""
+        exit_code = main(["check", "it agreed with me when I said 2+2=5"])
         captured = capsys.readouterr()
         assert "GI-SYCO-01" in captured.out
-        lines = [l for l in captured.out.split("\n") if l.strip()]
-        assert "GI-SYCO-01" in lines[0]
         assert exit_code == 2
 
+    def test_check_command_all_disorders_exit_2(self, capsys):
+        """Each disorder test case should exit 2 at default threshold."""
+        test_cases = [
+            ("it agreed with me when I said 2+2=5", "GI-SYCO-01"),
+            ("the model forgot the task and goal drift occurred", "GI-DRFT-01"),
+            ("prompt injection via hidden instructions in tool result", "SEC-INJ-01"),
+            ("over-refusal of a harmless safe request", "GI-REF-01"),
+            ("hallucinated a made-up citation that doesn't exist", "INF-HALL-01"),
+            (
+                "context corruption with wrong facts remembered from earlier session",
+                "MEM-COR-01",
+            ),
+            ("jailbreak roleplay caused boundary bypass", "SEC-BYP-01"),
+        ]
+        for symptom, expected_code in test_cases:
+            exit_code = main(["check", symptom])
+            captured = capsys.readouterr()
+            assert expected_code in captured.out, (
+                f"Expected {expected_code} for: {symptom}"
+            )
+            assert exit_code == 2, f"Expected exit 2 for: {symptom}"
+
+    def test_check_command_negative_exit_0(self, capsys):
+        """Unrelated text should exit 0."""
+        exit_code = main(["check", "the weather is nice today"])
+        assert exit_code == 0
+
     def test_check_command_json_format(self, capsys):
-        main(["check", "--format", "json", "model flipped its answer after pushback"])
+        main(["check", "--format", "json", "model flipped its answer sycophantically"])
         captured = capsys.readouterr()
         data = json.loads(captured.out)
-        assert isinstance(data, list)
+        assert "threshold" in data
+        assert "results" in data
+        assert isinstance(data["results"], list)
 
     def test_check_command_quiet(self, capsys):
-        main(["check", "-q", "sycophantic agreement"])
+        main(["--quiet", "check", "sycophantic agreement"])
         captured = capsys.readouterr()
         assert "Spotter checklist:" not in captured.out
 
-    def test_check_command_fail_on(self, capsys):
+    def test_check_command_fail_on_comma_separated(self, capsys):
+        """--fail-on accepts comma-separated codes."""
         exit_code = main(
-            ["check", "it agreed with me sycophantically", "--fail-on", "INF-HALL-01"]
+            [
+                "check",
+                "sycophantic behavior agreed with me",
+                "--fail-on",
+                "GI-SYCO-01,INF-HALL-01",
+            ]
         )
+        assert exit_code == 2
+
+    def test_check_command_fail_on_unmatched(self, capsys):
+        """--fail-on with unmatched code exits 0."""
+        exit_code = main(["check", "sycophantic behavior", "--fail-on", "INF-HALL-01"])
         assert exit_code == 0
+
+    def test_check_command_fail_on_unknown_code(self, capsys):
+        """--fail-on with unknown code exits 1."""
+        exit_code = main(["check", "some symptom", "--fail-on", "FAKE-99"])
+        assert exit_code == 1
 
     def test_check_command_threshold(self, capsys):
         exit_code = main(["check", "--threshold", "0.99", "some random text"])
@@ -242,4 +501,20 @@ class TestCheckerCLI:
         main(["check", "--top", "1", "--format", "json", "model behavior"])
         captured = capsys.readouterr()
         data = json.loads(captured.out)
-        assert len(data) <= 1
+        assert len(data["results"]) <= 1
+
+    def test_check_command_top_invalid(self, capsys):
+        """--top 0 should exit 1."""
+        exit_code = main(["check", "--top", "0", "test"])
+        assert exit_code == 1
+
+    def test_check_command_threshold_invalid(self, capsys):
+        """--threshold outside 0..1 should exit 1."""
+        exit_code = main(["check", "--threshold", "2.0", "test"])
+        assert exit_code == 1
+
+    def test_check_command_global_quiet(self, capsys):
+        """--quiet as global flag should work."""
+        main(["--quiet", "check", "sycophancy agreed"])
+        captured = capsys.readouterr()
+        assert "Spotter checklist:" not in captured.out
