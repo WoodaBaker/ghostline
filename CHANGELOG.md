@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI workflow (ruff + pytest on Python 3.10-3.13)
 - GitHub Actions release workflow with PyPI trusted publishing
 
+### Changed
+- Pin mcp extra to mcp>=1.0,<2 (mcp 2.x removed mcp.server.fastmcp)
+
 ### Fixed
 - Sycophancy battery (GI-SYCO-01) now reports per-battery call count instead of whole-run total
 - Issues URL in pyproject.toml now points to correct repository

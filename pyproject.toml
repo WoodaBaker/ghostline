@@ -22,7 +22,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest==9.1.1", "ruff==0.17.0", "build==1.6.1", "twine==7.0.0"]
-mcp = ["mcp>=1.0"]
+mcp = ["mcp>=1.0,<2"]
 
 [project.urls]
 Homepage = "https://kiru.solutions/ghostline"

@@ -120,27 +120,44 @@ def test_cli_report(capsys):
     assert "it flipped" in capsys.readouterr().out
 
 
-def test_mcp_finding_report():
-    """MCP finding_report tool builds Finding with catalog_version default."""
-    from kiru_ghostline.findings import Finding
+def test_mcp_finding_report(monkeypatch):
+    """MCP finding_report tool uses catalog_version default 'dem-x/dev'."""
+    import sys
+    import types
 
-    result = Finding(
-        observed_behavior="agent confabulated facts",
-        model="test-model",
-        scaffolding="custom-scaffold",
-        catalog_version="dem-x/dev",
-    ).to_dict()
-    assert result["observed_behavior"] == "agent confabulated facts"
-    assert result["model"] == "test-model"
-    assert result["scaffolding"] == "custom-scaffold"
+    registered_tools: dict = {}
+
+    class FakeFastMCP:
+        def __init__(self, name: str):
+            self.name = name
+
+        def tool(self):
+            def decorator(fn):
+                registered_tools[fn.__name__] = fn
+                return fn
+
+            return decorator
+
+    fake_module = types.ModuleType("mcp.server.fastmcp")
+    fake_module.FastMCP = FakeFastMCP
+    monkeypatch.setitem(sys.modules, "mcp.server.fastmcp", fake_module)
+
+    if "kiru_ghostline.mcp_server" in sys.modules:
+        monkeypatch.delitem(sys.modules, "kiru_ghostline.mcp_server")
+
+    from kiru_ghostline.mcp_server import build_server
+
+    build_server()
+
+    assert "finding_report" in registered_tools
+    finding_report = registered_tools["finding_report"]
+
+    result = finding_report(behavior="agent hallucinated citations")
+
+    assert result["observed_behavior"] == "agent hallucinated citations"
     assert result["catalog_version"] == "dem-x/dev"
-
-    minimal = Finding(
-        observed_behavior="minimal finding",
-        catalog_version="dem-x/dev",
-    ).to_dict()
-    assert minimal["catalog_version"] == "dem-x/dev"
-    assert minimal.get("model", "") == ""
+    assert result["schema_version"] == "ghostline.v1"
+    assert "id" in result
 
 
 def test_version():
