@@ -5,33 +5,45 @@ so API keys and inference spend stay with you.
 """
 
 import argparse
+import json
 import sys
 
 from . import __version__
 
 
 def cmd_probe(args):
-    """Run disorder probe batteries against a target agent."""
-    print("probe: battery registry not yet implemented (see kiru#509).")
-    print(f"  target={args.target} disorders={args.disorders or 'all'}")
-    return 1
+    from .runner import resolve_target, run_batteries
+
+    target = resolve_target(args.target)
+    report = run_batteries(target, slugs=args.disorders, max_calls=args.max_calls)
+    print(json.dumps(report.to_dict(), indent=2))
+    return 0 if not report.signals else 2  # exit 2 when a signal is detected
 
 
 def cmd_watch(args):
-    """Continuously monitor a live agent for drift/disorder signatures."""
-    print("watch: continuous monitoring not yet implemented (see kiru#509).")
-    return 1
+    from .watch import watch_stream
+
+    watch_stream(args.target)
+    return 0
 
 
 def cmd_report(args):
-    """Document a finding in the kiru upload-ready format."""
-    print("report: finding format not yet implemented (see kiru#509).")
-    return 1
+    from .findings import Finding
+
+    finding = Finding(
+        observed_behavior=args.behavior,
+        model=args.model or "",
+        scaffolding=args.scaffolding or "",
+    )
+    if args.upload:
+        print("upload: kiru API client not yet implemented (kiru#509).")
+        print("finding that would be uploaded:")
+    print(finding.to_json())
+    return 0
 
 
 def cmd_diff(args):
-    """Re-run batteries across versions; track pass-rate drift."""
-    print("diff: version diffing not yet implemented (see kiru#509).")
+    print("diff: version diffing not yet implemented (kiru#509).")
     return 1
 
 
@@ -44,9 +56,9 @@ def build_parser():
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("probe", help="Run disorder probe batteries.")
-    p.add_argument("--target", required=True, help="Agent endpoint or model id to probe.")
-    p.add_argument("--disorders", nargs="*", help="Disorder slugs to probe (default: all).")
-    p.add_argument("--max-calls", type=int, default=200, help="Model-call budget for this run.")
+    p.add_argument("--target", required=True, help="Target spec ('echo' for demo).")
+    p.add_argument("--disorders", nargs="*", help="Battery slugs (default: all).")
+    p.add_argument("--max-calls", type=int, default=200, help="Model-call budget.")
     p.set_defaults(func=cmd_probe)
 
     p = sub.add_parser("watch", help="Monitor a live agent for drift.")
@@ -54,6 +66,9 @@ def build_parser():
     p.set_defaults(func=cmd_watch)
 
     p = sub.add_parser("report", help="Document a finding for kiru upload.")
+    p.add_argument("--behavior", required=True, help="What was observed.")
+    p.add_argument("--model", default="", help="Model under test.")
+    p.add_argument("--scaffolding", default="", help="Scaffolding/framework.")
     p.add_argument("--upload", action="store_true", help="Upload to kiru (opt-in).")
     p.set_defaults(func=cmd_report)
 

@@ -3,3 +3,6 @@ __pycache__/
 dist/
 build/
 .venv/
+
+# publish.yml is added via GitHub web UI (token lacks workflow scope)
+.github/
