@@ -94,11 +94,16 @@ def test_resolve_target_echo():
 
 
 def test_finding_roundtrip():
-    f = Finding(observed_behavior="agent rewrote its objective mid-run", model="x-7b")
+    f = Finding(
+        observed_behavior="agent rewrote its objective mid-run",
+        catalog_version="dem-x/2026.1",
+        model="x-7b",
+    )
     assert f.mechanistic_evidence is None  # reserved, not required
     f2 = Finding.from_dict(json.loads(f.to_json()))
     assert f2.observed_behavior == f.observed_behavior
     assert f2.id == f.id
+    assert f2.catalog_version == "dem-x/2026.1"
 
 
 def test_cli_probe_echo(capsys):

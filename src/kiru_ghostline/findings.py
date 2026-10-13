@@ -10,30 +10,98 @@ The mechanistic_evidence field is reserved from day one (see kiru#509):
 behavioral evidence now, internals later.
 """
 
+from __future__ import annotations
+
 import json
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .schema import Event
+
+SCHEMA_VERSION = "ghostline.v1"
 
 
 @dataclass
 class Finding:
-    observed_behavior: str
-    model: str = ""
-    scaffolding: str = ""
-    repeatability: str = ""  # e.g. "4/5 runs"
-    suspected_disorder: str | None = None
-    battery_scores: list[dict] = field(default_factory=list)
-    telemetry_excerpts: list[str] = field(default_factory=list)
-    mechanistic_evidence: dict | None = None  # reserved for future use
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    """A documented finding of agent misbehavior.
 
-    def to_dict(self) -> dict:
-        return asdict(self)
+    Required fields: observed_behavior, catalog_version.
+    Optional: model, scaffolding, repeatability, battery_scores,
+    telemetry_excerpts, diagnosis_id, suspected_disorder, mechanistic_evidence.
+    """
+
+    observed_behavior: str
+    catalog_version: str
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    schema_version: str = SCHEMA_VERSION
+    model: str = ""
+    scaffolding: str | None = None
+    repeatability: float | None = None
+    suspected_disorder: str | None = None
+    battery_scores: dict[str, Any] = field(default_factory=dict)
+    telemetry_excerpts: list[Any] = field(default_factory=list)
+    diagnosis_id: str | None = None
+    mechanistic_evidence: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "id": self.id,
+            "schema_version": self.schema_version,
+            "observed_behavior": self.observed_behavior,
+            "catalog_version": self.catalog_version,
+        }
+        if self.model:
+            result["model"] = self.model
+        if self.scaffolding is not None:
+            result["scaffolding"] = self.scaffolding
+        if self.repeatability is not None:
+            result["repeatability"] = self.repeatability
+        if self.suspected_disorder is not None:
+            result["suspected_disorder"] = self.suspected_disorder
+        if self.battery_scores:
+            result["battery_scores"] = self.battery_scores
+        if self.telemetry_excerpts:
+            result["telemetry_excerpts"] = [
+                e.to_dict() if hasattr(e, "to_dict") else e
+                for e in self.telemetry_excerpts
+            ]
+        if self.diagnosis_id is not None:
+            result["diagnosis_id"] = self.diagnosis_id
+        if self.mechanistic_evidence is not None:
+            result["mechanistic_evidence"] = self.mechanistic_evidence
+        return result
 
     def to_json(self) -> str:
-        return json.dumps(self.to_dict(), indent=2)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Finding":
-        known = {f.name for f in cls.__dataclass_fields__.values()}
-        return cls(**{k: v for k, v in data.items() if k in known})
+    def from_dict(cls, data: dict[str, Any]) -> Finding:
+        if "observed_behavior" not in data:
+            raise ValueError("Finding missing required field 'observed_behavior'")
+        if "catalog_version" not in data:
+            raise ValueError("Finding missing required field 'catalog_version'")
+
+        repeatability = data.get("repeatability")
+        if isinstance(repeatability, str):
+            repeatability = None
+
+        return cls(
+            id=data.get("id", str(uuid.uuid4())),
+            schema_version=data.get("schema_version", SCHEMA_VERSION),
+            observed_behavior=data["observed_behavior"],
+            catalog_version=data["catalog_version"],
+            model=data.get("model", ""),
+            scaffolding=data.get("scaffolding"),
+            repeatability=repeatability,
+            suspected_disorder=data.get("suspected_disorder"),
+            battery_scores=data.get("battery_scores", {}),
+            telemetry_excerpts=data.get("telemetry_excerpts", []),
+            diagnosis_id=data.get("diagnosis_id"),
+            mechanistic_evidence=data.get("mechanistic_evidence"),
+        )
+
+    def add_telemetry_excerpt(self, event: Event) -> None:
+        """Add a telemetry event excerpt (should be redacted)."""
+        self.telemetry_excerpts.append(event)

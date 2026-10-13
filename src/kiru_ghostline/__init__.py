@@ -6,38 +6,44 @@ and document new findings in the upload-ready format.
 
 __version__ = "0.1.0"
 
-from .trace import (
+from .schema import (
     SCHEMA_VERSION,
+    CaptureMode,
     Diagnosis,
     Event,
+    EventType,
+    ModelRef,
     Signal,
+    SignalSource,
     Trace,
-    TraceHeader,
     TraceParseError,
     TraceValidationError,
+    Verdict,
+    append_event,
     iter_events,
     read_jsonl,
-    read_jsonl_stream,
+    to_kiru_event,
     validate_jsonl,
-    validate_trace,
     write_jsonl,
-    write_jsonl_stream,
 )
 
 __all__ = [
     "SCHEMA_VERSION",
+    "CaptureMode",
     "Diagnosis",
     "Event",
+    "EventType",
+    "ModelRef",
     "Signal",
+    "SignalSource",
     "Trace",
-    "TraceHeader",
     "TraceParseError",
     "TraceValidationError",
+    "Verdict",
+    "append_event",
     "iter_events",
     "read_jsonl",
-    "read_jsonl_stream",
+    "to_kiru_event",
     "validate_jsonl",
-    "validate_trace",
     "write_jsonl",
-    "write_jsonl_stream",
 ]
