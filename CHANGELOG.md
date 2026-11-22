@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `experiments/drift/run.py`: seeded drift toy showing single-unit codes change while
+  the stimulus similarity matrix holds, with a relation-breaking control; run in CI
+  by `tests/test_drift_experiment.py`
 - Full MIT license text in LICENSE file
 - CONTRIBUTING.md with contribution guidelines
 - SECURITY.md with security policy and vulnerability reporting

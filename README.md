@@ -40,6 +40,7 @@ src/kiru_ghostline/
 ├── watch.py          # continuous monitoring (stub)
 └── mcp_server.py     # MCP tools: probe_disorder, finding_report
 skills/ghostline-diagnostics/SKILL.md  # agent skill for Claude Code plugin
+experiments/drift/   # seeded drift toy: codes change, similarity structure holds
 .claude-plugin/      # plugin.json + marketplace.json
 server.json          # official MCP registry listing
 ```
